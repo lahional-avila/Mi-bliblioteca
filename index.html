@@ -5,11 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
-
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=13" />
-
+<link rel="manifest" href="manifest.json?v=14" />
 <script>
   try{
     document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light';
@@ -18,32 +15,30 @@
   }catch(e){}
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=13').catch(()=>{});
+      navigator.serviceWorker.register('sw.js?v=14').catch(()=>{});
     });
   }
 </script>
-
 <style>
   :root{
     --bg:#f4f4f8; --surface:#ffffff; --surface-2:#fafafc;
     --text:#12121a; --muted:#6b7280; --border:#e7e7ee;
     --accent:#6366f1; --accent-2:#8b5cf6;
     --star:#f59e0b; --danger:#e11d48; --ok:#10b981; --nota:#eab308;
-    --fav:#ef4444; --seccion:#0ea5e9;
+    --fav:#ef4444;
     --shadow-sm:0 1px 2px rgba(16,24,40,.05);
     --shadow-md:0 2px 4px rgba(16,24,40,.04), 0 12px 28px -14px rgba(16,24,40,.25);
     --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35);
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
-    --font-base: 16px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
-    --card-cover-w: 72px; --card-cover-h: 100px;
+    --font-base: 16px; --icon-sm: 16px; --icon-md: 20px; --card-cover-w: 72px; --card-cover-h: 100px;
   }
   [data-font="sm"]{ --font-base: 14px; }
   [data-font="md"]{ --font-base: 16px; }
   [data-font="lg"]{ --font-base: 18px; }
   [data-font="xl"]{ --font-base: 20px; }
-  [data-icons="sm"]{ --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --card-cover-w: 56px; --card-cover-h: 80px; }
-  [data-icons="md"]{ --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px; --card-cover-w: 72px; --card-cover-h: 100px; }
-  [data-icons="lg"]{ --icon-sm: 18px; --icon-md: 24px; --icon-lg: 30px; --card-cover-w: 88px; --card-cover-h: 122px; }
+  [data-icons="sm"]{ --icon-sm: 14px; --icon-md: 16px; --card-cover-w: 56px; --card-cover-h: 80px; }
+  [data-icons="md"]{ --icon-sm: 16px; --icon-md: 20px; --card-cover-w: 72px; --card-cover-h: 100px; }
+  [data-icons="lg"]{ --icon-sm: 18px; --icon-md: 24px; --card-cover-w: 88px; --card-cover-h: 122px; }
   [data-theme="dark"]{
     --bg:#0a0a10; --surface:#14141d; --surface-2:#1a1a24;
     --text:#f2f2f7; --muted:#9aa0ae; --border:#262632;
@@ -74,22 +69,18 @@
   }
   .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px}
   .brand{display:flex;align-items:center;gap:11px;min-width:0}
-  .brand-mark{
-    width:38px;height:38px;border-radius:11px;flex-shrink:0;
+  .brand-mark{width:38px;height:38px;border-radius:11px;flex-shrink:0;
     background:linear-gradient(140deg,var(--accent),var(--accent-2));
     display:grid;place-items:center;color:#fff;
-    box-shadow:0 6px 16px -6px color-mix(in srgb, var(--accent) 75%, transparent);
-  }
+    box-shadow:0 6px 16px -6px color-mix(in srgb, var(--accent) 75%, transparent);}
   .brand-mark svg{width:var(--icon-md);height:var(--icon-md)}
   .brand h1{margin:0;font-size:1.02rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
   .brand-sub{margin:1px 0 0;font-size:.74rem;color:var(--muted)}
   .topbar-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
-  .btn{
-    font:inherit;font-size:.88rem;font-weight:600;border:1px solid transparent;
+  .btn{font:inherit;font-size:.88rem;font-weight:600;border:1px solid transparent;
     border-radius:11px;padding:9px 14px;cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
-    white-space:nowrap;transition:.16s;
-  }
+    white-space:nowrap;transition:.16s;}
   .btn:active{transform:scale(.975)}
   .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
     box-shadow:0 6px 18px -8px color-mix(in srgb, var(--accent) 90%, transparent);}
@@ -100,15 +91,12 @@
   .btn-danger{background:transparent;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%, var(--border))}
   .btn-danger:hover{background:color-mix(in srgb,var(--danger) 10%, transparent)}
   .btn-sm{padding:7px 11px;font-size:.8rem;border-radius:9px}
-  .icon-btn{
-    width:38px;height:38px;border-radius:11px;border:1px solid var(--border);
+  .icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--border);
     background:var(--surface);color:var(--muted);cursor:pointer;
     display:grid;place-items:center;transition:.16s;flex-shrink:0;
-    box-shadow:var(--shadow-sm);
-  }
+    box-shadow:var(--shadow-sm);}
   .icon-btn:hover{color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%, var(--border))}
   .icon-btn svg{width:var(--icon-md);height:var(--icon-md)}
-
   .hero{padding:26px 0 6px}
   .hero-title{margin:0;font-size:clamp(1.5rem,4.4vw,2.3rem);line-height:1.15;letter-spacing:-.03em;font-weight:800}
   .grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -118,130 +106,87 @@
     padding:9px 14px;display:flex;flex-direction:column;gap:1px;box-shadow:var(--shadow-sm);min-width:88px}
   .stat strong{font-size:1.1rem;letter-spacing:-.02em;line-height:1.2}
   .stat span{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-
   .toolbar{display:flex;gap:9px;margin:20px 0 16px;flex-wrap:wrap}
   .search-wrap{position:relative;flex:1;min-width:220px}
   .search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;width:var(--icon-sm);height:var(--icon-sm)}
   .search-wrap input, .toolbar select{
     font:inherit;font-size:.92rem;padding:11px 14px;border:1px solid var(--border);
     border-radius:11px;background:var(--surface);color:var(--text);outline:none;
-    transition:.16s;box-shadow:var(--shadow-sm);width:100%;
-  }
+    transition:.16s;box-shadow:var(--shadow-sm);width:100%;}
   .search-wrap input{padding-left:42px}
   .search-wrap input:focus, .toolbar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%, transparent)}
   .toolbar select{width:auto;flex-shrink:0;cursor:pointer;padding-right:34px;appearance:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right 13px center;}
-
   .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-  .chip{
-    font:inherit;font-size:.78rem;font-weight:600;
+  .chip{font:inherit;font-size:.78rem;font-weight:600;
     padding:6px 4px 6px 11px;border-radius:20px;border:1px solid var(--border);
     background:var(--surface);color:var(--muted);cursor:pointer;transition:.16s;
-    white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
-  }
+    white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
   .chip:hover{color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%, var(--border))}
   .chip.active{background:color-mix(in srgb,var(--accent) 15%, transparent);color:var(--accent);border-color:var(--accent)}
   .chip.chip-fav.active{background:color-mix(in srgb,var(--fav) 14%, transparent);color:var(--fav);border-color:color-mix(in srgb,var(--fav) 50%, var(--border))}
-  .chip-count{
-    font-size:.7rem;font-weight:800;min-width:22px;height:20px;padding:0 6px;border-radius:11px;
+  .chip-count{font-size:.7rem;font-weight:800;min-width:22px;height:20px;padding:0 6px;border-radius:11px;
     background:var(--surface-2);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;
-    border:1px solid var(--border);line-height:1;
-  }
+    border:1px solid var(--border);line-height:1;}
   .chip.active .chip-count{background:color-mix(in srgb,var(--accent) 25%, transparent);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%, transparent)}
   .chip.chip-fav.active .chip-count{background:color-mix(in srgb,var(--fav) 25%, transparent);color:var(--fav);border-color:color-mix(in srgb,var(--fav) 45%, transparent)}
-
   main{padding-bottom:70px}
   .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
-  .card{
-    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
     padding:15px;display:flex;flex-direction:column;gap:11px;cursor:pointer;
     box-shadow:var(--shadow-sm);transition:.22s;animation:rise .3s ease backwards;
-    position:relative;overflow:hidden;
-  }
+    position:relative;overflow:hidden;}
   @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @media(hover:hover){
     .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:color-mix(in srgb,var(--accent) 32%, var(--border))}
   }
-  .cover{
-    width:var(--card-cover-w);height:var(--card-cover-h);border-radius:4px 10px 10px 4px;flex-shrink:0;
+  .cover{width:var(--card-cover-w);height:var(--card-cover-h);border-radius:4px 10px 10px 4px;flex-shrink:0;
     background:linear-gradient(145deg,var(--c1,#6366f1),var(--c2,#8b5cf6));
     display:grid;place-items:center;color:#fff;
     font-family:var(--serif);font-size:1.6rem;font-weight:700;
     position:relative;overflow:hidden;
-    box-shadow:inset -7px 0 12px -7px rgba(0,0,0,.55), 0 6px 14px -7px rgba(0,0,0,.55);
-  }
+    box-shadow:inset -7px 0 12px -7px rgba(0,0,0,.55), 0 6px 14px -7px rgba(0,0,0,.55);}
   .cover::after{content:'';position:absolute;left:6px;top:0;bottom:0;width:1.5px;background:rgba(255,255,255,.3);pointer-events:none}
   .cover img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
   .card.read{background:color-mix(in srgb,var(--ok) 4%, var(--surface))}
-  .badge-read{
-    position:absolute;top:0;right:0;
+  .badge-read{position:absolute;top:0;right:0;
     background:linear-gradient(135deg,#10b981,#059669);color:#fff;
     font-size:.66rem;font-weight:800;padding:4px 9px 4px 11px;
     border-bottom-left-radius:10px;letter-spacing:.04em;
     display:flex;align-items:center;gap:4px;z-index:2;
-    box-shadow:0 2px 6px rgba(16,185,129,.35);
-  }
+    box-shadow:0 2px 6px rgba(16,185,129,.35);}
   .badge-read svg{width:10px;height:10px}
   .card-top{display:flex;gap:12px;align-items:flex-start}
-  .card-head{min-width:0;flex:1;padding-bottom: 48px;}
+  .card-head{min-width:0;flex:1;padding-bottom:48px}
   .card-head h3{margin:0;font-size:.98rem;line-height:1.3;letter-spacing:-.015em;font-weight:700;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .author{margin:2px 0 0;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-  .resena-card {
-    margin: 4px 0 0;
-    font-size: .75rem;
-    color: var(--muted);
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-style: italic;
-    font-family: var(--serif);
-  }
-
-  /* Botón Play flotante en la tarjeta */
-  .card-play {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 50%, transparent);
-    z-index: 3;
-    transition: transform .15s, filter .15s;
-  }
-  .card-play:hover { transform: scale(1.08); filter: brightness(1.1); }
-  .card-play:active { transform: scale(.96); }
-  .card-play svg { width: 18px; height: 18px; margin-left: 2px; }
-
+  .resena-card{margin:4px 0 0;font-size:.75rem;color:var(--muted);line-height:1.3;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    font-style:italic;font-family:var(--serif);}
+  .card-play{position:absolute;bottom:12px;right:12px;
+    width:48px;height:48px;border-radius:50%;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+    border:none;cursor:pointer;display:grid;place-items:center;
+    box-shadow:0 4px 14px rgba(99,102,241,.5);
+    z-index:3;transition:transform .15s, filter .15s;}
+  .card-play:hover{transform:scale(1.08);filter:brightness(1.1)}
+  .card-play:active{transform:scale(.96)}
+  .card-play svg{width:20px;height:20px;margin-left:2px}
   .meta-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
-  .pill{
-    font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:20px;
+  .pill{font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:20px;
     background:var(--surface-2);color:var(--muted);border:1px solid var(--border);
     min-width:52px;text-align:center;justify-content:center;
-    display:inline-flex;align-items:center;gap:3px;line-height:1.1;height:20px;white-space:nowrap;
-  }
+    display:inline-flex;align-items:center;gap:3px;line-height:1.1;height:20px;white-space:nowrap;}
   .pill.pct{background:color-mix(in srgb,var(--ok) 15%, transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%, transparent);font-weight:800}
   .pill.pct.full{background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-color:transparent}
   .pill.fav{background:color-mix(in srgb,var(--fav) 14%, transparent);color:var(--fav);border-color:color-mix(in srgb,var(--fav) 35%, transparent)}
   .pill.star{background:color-mix(in srgb,var(--star) 14%, transparent);color:var(--star);border-color:color-mix(in srgb,var(--star) 35%, transparent)}
-
   .empty{text-align:center;padding:56px 22px;color:var(--muted);
     background:var(--surface);border:1px dashed var(--border);border-radius:18px}
   .empty h3{margin:0 0 6px;color:var(--text);font-size:1rem}
   .empty p{margin:0;font-size:.88rem}
-  .empty .btn{margin-top:16px}
-
   dialog{border:none;padding:0;margin:auto;color:var(--text);font-family:inherit;background:var(--surface);border-radius:18px;box-shadow:var(--shadow-lg)}
   dialog::backdrop{background:rgba(10,10,16,.55);backdrop-filter:blur(4px)}
   dialog[open]{animation:pop .18s ease}
@@ -251,7 +196,7 @@
   #syncModal{width:min(560px,94vw);max-height:90vh}
   #settingsModal{width:min(560px,94vw);max-height:90vh}
   @media(max-width:640px){
-    #reviewModal{width:100vw;height:auto;max-height:85vh;border-radius:16px;width:92vw}
+    #reviewModal{width:92vw;height:auto;max-height:85vh;border-radius:16px}
     #addModal{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
     #syncModal,#settingsModal{width:92vw;height:auto;max-height:85vh;border-radius:16px}
   }
@@ -267,13 +212,11 @@
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%, transparent)}
   .field textarea{resize:vertical;min-height:90px;line-height:1.6;font-family:ui-monospace,Monaco,monospace;font-size:.85rem}
   .hint{font-size:.78rem;color:var(--muted);margin:0}
-  .hint strong{color:var(--text)}
   .hint code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:.72rem;border:1px solid var(--border)}
   .sync-status{padding:10px 12px;border-radius:10px;font-size:.85rem;display:none}
   .sync-status.ok{background:color-mix(in srgb,var(--ok) 12%, transparent);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 30%, transparent);display:block}
   .sync-status.err{background:color-mix(in srgb,var(--danger) 10%, transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 30%, transparent);display:block}
   .sync-status.info{background:color-mix(in srgb,var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%, transparent);display:block}
-
   .review-cover{width:120px;height:170px;border-radius:6px 12px 12px 6px;
     background:linear-gradient(145deg,#6366f1,#8b5cf6);display:grid;place-items:center;color:#fff;
     font-family:var(--serif);font-size:2.4rem;font-weight:700;position:relative;overflow:hidden;
@@ -283,16 +226,15 @@
   .review-info h3{margin:0;font-family:var(--serif);font-size:1.3rem;line-height:1.2;letter-spacing:-.02em}
   .review-info .autor{margin:4px 0 0;color:var(--muted);font-size:.9rem}
   .review-info .meta-row{justify-content:center;margin-top:10px}
+  .review-info .btn-leer{width:100%;margin-top:14px;font-size:.95rem;padding:12px}
   .review-resena{margin-top:14px;padding:14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--border);
     font-family:var(--serif);font-size:1rem;line-height:1.7;color:var(--text)}
   .review-resena-label{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
   .tts-btn-mini{font:inherit;font-size:.72rem;font-weight:700;background:color-mix(in srgb,var(--accent) 15%, transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 35%, transparent);padding:5px 9px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
   .tts-btn-mini:hover{background:color-mix(in srgb,var(--accent) 25%, transparent)}
   .tts-btn-mini.activo{background:var(--accent);color:#fff}
-
   #toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:11px 20px;border-radius:12px;font-size:.87rem;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:100;box-shadow:var(--shadow-lg);max-width:90vw;text-align:center}
   #toast.show{opacity:1;transform:translate(-50%,0)}
-
   @media(max-width:640px){
     .brand-sub{display:none}
     .brand h1{font-size:.94rem}
@@ -319,13 +261,14 @@
     .grid .card-top{flex-direction:column;gap:8px;align-items:stretch}
     .grid .cover{width:100%;height:170px;border-radius:6px 6px 4px 4px;font-size:2.4rem}
     .grid .cover::after{display:none}
-    .grid .card-head{padding-bottom: 44px;}
+    .grid .card-head{padding-bottom:44px}
     .grid .card-head h3{font-size:.82rem;-webkit-line-clamp:2;line-height:1.25}
     .grid .author{font-size:.68rem}
     .grid .resena-card{font-size:.65rem;-webkit-line-clamp:2}
     .grid .meta-row{gap:3px;margin-top:4px}
     .grid .pill{font-size:.58rem;padding:2px 6px;min-width:42px;height:17px}
-    .grid .card-play{width:38px;height:38px;bottom:8px;right:8px;}
+    .grid .card-play{width:40px;height:40px;bottom:8px;right:8px}
+    .grid .card-play svg{width:16px;height:16px}
   }
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
@@ -419,6 +362,7 @@
         <h3 id="revTitulo"></h3>
         <p class="autor" id="revAutor"></p>
         <div class="meta-row" id="revMeta"></div>
+        <button class="btn btn-primary btn-leer" id="revLeer">📖 Leer libro</button>
       </div>
       <div class="review-resena" id="revResenaWrap">
         <div class="review-resena-label">
@@ -433,8 +377,7 @@
     </div>
     <footer class="modal-foot">
       <button type="button" class="btn btn-ghost" id="revEditar">Editar</button>
-      <button type="button" class="btn btn-danger btn-sm" id="revEliminar">Eliminar</button>
-      <button type="button" class="btn btn-primary" id="revLeer" style="flex:1">📖 Leer libro</button>
+      <button type="button" class="btn btn-danger" id="revEliminar">Eliminar</button>
     </footer>
   </div>
 </dialog>
@@ -449,18 +392,15 @@
     </header>
     <div class="modal-body">
       <p class="hint">Subí el archivo de texto (TXT) y la imagen de portada (JPG/PNG) al mismo tiempo, o pegá el texto.<br>
-      <strong>Formato del TXT:</strong> <code>Título:</code>, <code>Autor:</code>, <code>Reseña:</code>, <code>## Capítulo</code>, <code>### Sección</code>.</p>
-      
+      <strong>Formato:</strong> <code>Título:</code>, <code>Autor:</code>, <code>Reseña:</code>, <code>## Capítulo</code>, <code>### Sección</code>.</p>
       <div class="field">
         <label for="addArchivo">Subir archivos (TXT y JPG/PNG)</label>
         <input type="file" id="addArchivo" multiple />
       </div>
-
       <div class="field">
         <label for="addTexto">Texto completo del libro</label>
         <textarea id="addTexto" placeholder="Pegá el texto aquí si no subís un archivo..." style="min-height:200px"></textarea>
       </div>
-
       <div class="field">
         <label>Portada</label>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
@@ -471,7 +411,6 @@
           <img src="" style="width:100%; height:100%; object-fit:cover;">
         </div>
       </div>
-
       <div id="addPreview" style="padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);display:none"></div>
     </div>
     <footer class="modal-foot">
@@ -490,7 +429,7 @@
       </button>
     </header>
     <div class="modal-body">
-      <p class="hint">Necesitás un <strong>token de GitHub</strong> (con scope <code>gist</code>) y el <strong>ID de un Gist secreto</strong> donde se guardará tu biblioteca.</p>
+      <p class="hint">Necesitás un <strong>token de GitHub</strong> (con scope <code>gist</code>) y el <strong>ID de un Gist secreto</strong>.</p>
       <div class="field">
         <label for="syncToken">Token de GitHub</label>
         <input type="password" id="syncToken" placeholder="ghp_..." autocomplete="off" />
@@ -569,7 +508,6 @@
   let busquedaTimer = null;
   let ttsActivo = false;
   let mejorVoz = null;
-
   let parsedPreview = null;
   let coverBlob = null;
 
@@ -614,10 +552,6 @@
     const arr = getEliminados();
     if (!arr.includes(id)) { arr.push(id); localStorage.setItem(LS_ELIMINADOS, JSON.stringify(arr)); }
   }
-  function removeEliminado(id) {
-    const arr = getEliminados().filter(x => x !== id);
-    localStorage.setItem(LS_ELIMINADOS, JSON.stringify(arr));
-  }
 
   async function fetchConTimeout(url, opts = {}, ms = 20000) {
     const ctrl = new AbortController();
@@ -642,15 +576,15 @@
         body: body ? JSON.stringify(body) : undefined
       });
     } catch (e) {
-      if (e.name === 'AbortError') throw new Error('Timeout de conexión');
-      if (/failed to fetch/i.test(e.message)) throw new Error('No se pudo conectar (¿sin internet o AdBlock bloqueando github.com?)');
+      if (e.name === 'AbortError') throw new Error('Timeout');
+      if (/failed to fetch/i.test(e.message)) throw new Error('No se pudo conectar');
       throw e;
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       let msg = err.message || `HTTP ${res.status}`;
-      if (res.status === 401) msg = 'Token inválido. Generá uno nuevo con scope "gist".';
-      if (res.status === 403) msg = 'Token sin permisos (necesita scope "gist").';
+      if (res.status === 401) msg = 'Token inválido. Generá uno nuevo.';
+      if (res.status === 403) msg = 'Token sin permisos (scope "gist").';
       if (res.status === 404) msg = 'Gist no encontrado. Verificá el ID.';
       throw new Error(msg);
     }
@@ -667,7 +601,6 @@
             ? await (await fetchConTimeout(file.raw_url)).text()
             : file.content;
           biblioteca = JSON.parse(contenido);
-          // Filtrar libros eliminados localmente
           const eliminados = getEliminados();
           biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
           localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
@@ -675,7 +608,7 @@
           return;
         }
       } catch (e) {
-        console.warn('Sync falló, usando cache:', e.message);
+        console.warn('Sync falló:', e.message);
       }
     }
     try {
@@ -700,11 +633,11 @@
         files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
       });
       $('#sSync').textContent = '✓';
-      if (!silencioso) toast('✓ Biblioteca sincronizada');
+      if (!silencioso) toast('✓ Sincronizado');
       return true;
     } catch (e) {
       $('#sSync').textContent = '⚠';
-      if (!silencioso) toast('Error de sync: ' + e.message + ' (guardado local)');
+      if (!silencioso) toast('⚠ Sync falló, guardado local');
       return false;
     }
   }
@@ -729,12 +662,7 @@
       titulo: '', autor: '', año: '', categoria: 'general', reseña: '',
       capitulos: [], secciones: []
     };
-
-    let actual = null;
-    let subActual = null;
-    let buffer = [];
-    let enReseña = false;
-    let reseñaBuffer = [];
+    let actual = null, subActual = null, buffer = [], enReseña = false, reseñaBuffer = [];
 
     function flushBuffer() {
       if (!actual) return;
@@ -743,7 +671,7 @@
       if (subActual === 'resumen') actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
       else if (subActual === 'puntos') actual.obj.puntos = (actual.obj.puntos ? actual.obj.puntos + '\n\n' : '') + txt;
       else if (subActual === 'aplicacion') actual.obj.aplicacion = (actual.obj.aplicacion ? actual.obj.aplicacion + '\n\n' : '') + txt;
-      else if (subActual === 'enseñanza' || subActual === 'ensenanza') actual.obj.enseñanza = (actual.obj.enseñanza ? actual.obj.enseñanza + '\n\n' : '') + txt;
+      else if (subActual === 'enseñanza') actual.obj.enseñanza = (actual.obj.enseñanza ? actual.obj.enseñanza + '\n\n' : '') + txt;
       else if (subActual === 'preguntas') {
         const preguntas = txt.split(/\n+/).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
         actual.obj.preguntas = (actual.obj.preguntas || []).concat(preguntas);
@@ -752,11 +680,8 @@
       }
       buffer = [];
     }
-
     function flushReseña() {
-      if (enReseña && reseñaBuffer.length) {
-        resultado.reseña = reseñaBuffer.join('\n').trim();
-      }
+      if (enReseña && reseñaBuffer.length) resultado.reseña = reseñaBuffer.join('\n').trim();
       enReseña = false;
       reseñaBuffer = [];
     }
@@ -767,10 +692,7 @@
 
       if (!resultado.titulo && /^\*\*[^*]+\*\*$/.test(lineaTrim)) {
         const m = lineaTrim.match(/^\*\*([^*]+)\*\*$/);
-        if (m) {
-          resultado.titulo = m[1].trim();
-          continue;
-        }
+        if (m) { resultado.titulo = m[1].trim(); continue; }
       }
 
       const mBoldField = lineaTrim.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)$/);
@@ -796,8 +718,7 @@
         continue;
       }
       if (mReseña) {
-        flushBuffer();
-        flushReseña();
+        flushBuffer(); flushReseña();
         enReseña = true;
         if (mReseña[2].trim()) reseñaBuffer.push(mReseña[2].trim());
         continue;
@@ -816,63 +737,47 @@
       }
 
       if (lineaTrim.startsWith('## ') || lineaTrim.startsWith('# ')) {
-        flushBuffer();
-        flushReseña();
-        let titulo;
-        if (lineaTrim.startsWith('## ')) {
-          titulo = lineaTrim.slice(3).trim();
-        } else {
-          titulo = lineaTrim.slice(2).trim();
-        }
+        flushBuffer(); flushReseña();
+        let titulo = lineaTrim.startsWith('## ') ? lineaTrim.slice(3).trim() : lineaTrim.slice(2).trim();
         const esParte = /^(parte|secci[oó]n|libro)\s+/i.test(titulo);
         if (esParte) {
           const sec = { id: uid(), titulo, capitulos: [] };
           resultado.secciones.push(sec);
-          actual = { tipo: 'sec', obj: sec, currentCap: null };
+          actual = { tipo: 'sec', obj: sec };
           subActual = null;
         } else {
           const cap = { id: uid(), titulo, resumen: '', puntos: '', aplicacion: '', enseñanza: '', preguntas: [], notas: [], ttsIndice: 0, leido: false };
-          if (actual && actual.tipo === 'sec') {
-            actual.obj.capitulos.push(cap);
-          } else {
-            resultado.capitulos.push(cap);
-          }
+          if (actual && actual.tipo === 'sec') actual.obj.capitulos.push(cap);
+          else resultado.capitulos.push(cap);
           actual = { tipo: 'cap', obj: cap };
           subActual = null;
         }
         continue;
       }
 
-      if (enReseña) {
-        reseñaBuffer.push(linea);
-      } else if (actual) {
-        buffer.push(linea);
-      }
+      if (enReseña) reseñaBuffer.push(linea);
+      else if (actual) buffer.push(linea);
     }
-    flushBuffer();
-    flushReseña();
-
+    flushBuffer(); flushReseña();
     return resultado;
   }
 
   async function buscarPortadaAuto(titulo, autor) {
     if (!titulo) return null;
-    function timeout(p, ms) { return Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]); }
+    const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
     const querys = [];
     if (autor) querys.push(`intitle:${titulo} inauthor:${autor}`);
     querys.push(`intitle:${titulo}`);
-    if (autor) querys.push(`${titulo} ${autor}`);
     for (const q of querys) {
       try {
-        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`;
-        const res = await timeout(fetch(url), 8000);
+        const res = await timeout(fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`), 8000);
         if (!res.ok) continue;
         const data = await res.json();
         if (!data.items) continue;
         for (const item of data.items) {
           const vi = item.volumeInfo;
           if (!vi) continue;
-          let coverUrl = (vi.imageLinks && (vi.imageLinks.thumbnail || vi.imageLinks.smallThumbnail)) || null;
+          let coverUrl = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail;
           if (!coverUrl && item.id) coverUrl = `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=2`;
           if (!coverUrl) continue;
           coverUrl = coverUrl.replace(/^http:/, 'https:');
@@ -880,33 +785,11 @@
             const imgRes = await timeout(fetch(coverUrl, { mode: 'cors' }), 6000);
             if (!imgRes.ok) continue;
             const blob = await imgRes.blob();
-            if (blob.type.startsWith('image/') && blob.size > 2000) {
-              return await comprimirThumbnail(blob);
-            }
+            if (blob.type.startsWith('image/') && blob.size > 2000) return await comprimirThumbnail(blob);
           } catch {}
         }
       } catch {}
     }
-    try {
-      const q = encodeURIComponent(`${titulo} ${autor||''}`.trim());
-      const res = await timeout(fetch(`https://openlibrary.org/search.json?q=${q}&limit=10`), 8000);
-      if (res.ok) {
-        const data = await res.json();
-        for (const doc of (data.docs || [])) {
-          if (doc.cover_i) {
-            try {
-              const imgRes = await timeout(fetch(`https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`, { mode: 'cors' }), 6000);
-              if (imgRes.ok) {
-                const blob = await imgRes.blob();
-                if (blob.type.startsWith('image/') && blob.size > 2000) {
-                  return await comprimirThumbnail(blob);
-                }
-              }
-            } catch {}
-          }
-        }
-      }
-    } catch {}
     return null;
   }
 
@@ -946,9 +829,8 @@
     function puntuar(v) {
       let p = 0;
       const n = (v.name||'').toLowerCase(), l = (v.lang||'').toLowerCase();
-      if (l === 'es-es') p += 40;
-      else if (l.startsWith('es-')) p += 25;
-      if (n.includes('neural') || n.includes('enhanced') || n.includes('premium')) p += 40;
+      if (l === 'es-es') p += 40; else if (l.startsWith('es-')) p += 25;
+      if (n.includes('neural') || n.includes('enhanced')) p += 40;
       if (n.includes('siri') || n.includes('google')) p += 20;
       return p;
     }
@@ -975,15 +857,11 @@
     const u = new SpeechSynthesisUtterance(texto);
     u.lang = 'es-ES';
     u.rate = 1;
-    if (mejorVoz) { u.voice = mejorVoz; u.lang = mejorVoz.lang || 'es-ES'; }
+    if (mejorVoz) u.voice = mejorVoz;
     u.onend = () => {
       ttsActivo = false;
       $('#revTtsBtn').classList.remove('activo');
       $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
-    };
-    u.onerror = () => {
-      ttsActivo = false;
-      $('#revTtsBtn').classList.remove('activo');
     };
     try {
       window.speechSynthesis.speak(u);
@@ -1003,9 +881,7 @@
       if (filtroActivo === 'leidos' && !l.leido) return false;
       if (filtroActivo === 'en-progreso' && !libroEnProgreso(l)) return false;
       if (filtroActivo === 'no-leidos' && (l.leido || libroEnProgreso(l))) return false;
-      if (q) {
-        if (!normalizar(l.titulo).includes(q) && !normalizar(l.autor).includes(q)) return false;
-      }
+      if (q && !normalizar(l.titulo).includes(q) && !normalizar(l.autor).includes(q)) return false;
       return true;
     });
     const cmp = {
@@ -1072,7 +948,6 @@
                 <span class="pill" style="background:color-mix(in srgb, ${cat.c1} 15%, transparent);color:${cat.c1};border-color:color-mix(in srgb, ${cat.c1} 40%, transparent)">${cat.nombre}</span>
                 <span class="pill pct ${pctClass}">${pct}%</span>
                 ${l.favorito ? `<span class="pill fav">❤ Fav</span>` : ''}
-                ${l.puntos > 0 ? `<span class="pill star">${l.puntos}★</span>` : ''}
               </div>
             </div>
           </div>
@@ -1087,7 +962,6 @@
     const l = biblioteca.libros.find(x => x.id === id);
     if (!l) return;
     libroActualReview = l;
-
     $('#revTituloHead').textContent = l.titulo;
     $('#revTitulo').textContent = l.titulo;
     $('#revAutor').textContent = l.autor || '';
@@ -1113,12 +987,10 @@
     const resena = (l.reseña || '').trim();
     $('#revResena').textContent = resena || 'Sin reseña disponible.';
     $('#revResenaWrap').style.display = resena ? '' : 'none';
-
     $('#reviewModal').showModal();
   }
 
   function abrirAdd() {
-    $('#addTitulo').textContent = 'Añadir libro';
     $('#addTexto').value = '';
     $('#addArchivo').value = '';
     $('#addPreview').style.display = 'none';
@@ -1134,18 +1006,18 @@
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = (e) => reject(new Error('Error al leer el archivo'));
+      reader.onerror = () => reject(new Error('Error al leer archivo'));
       reader.readAsText(file, 'UTF-8');
     });
   }
 
   function analizarTexto() {
     const texto = $('#addTexto').value.trim();
-    if (!texto) { return; }
+    if (!texto) return;
     try {
       const parsed = parsearTextoEstructurado(texto);
       const totalCaps = (parsed.capitulos.length || 0) + parsed.secciones.reduce((a, s) => a + (s.capitulos?.length || 0), 0);
-      if (!parsed.titulo && totalCaps === 0) { return; }
+      if (!parsed.titulo && totalCaps === 0) return;
       parsedPreview = parsed;
 
       let html = `<div style="font-size:.85rem;line-height:1.6">
@@ -1158,11 +1030,8 @@
       </div>`;
       $('#addPreview').innerHTML = html;
       $('#addPreview').style.display = 'block';
-      toast('✓ Analizado: ' + totalCaps + ' capítulo(s)');
-    } catch (e) {
-      console.warn('Error al analizar:', e);
-      toast('Error al analizar: ' + e.message);
-    }
+      toast('✓ Analizado: ' + totalCaps + ' cap.');
+    } catch (e) { console.warn(e); }
   }
 
   function mostrarPreviewPortada(blob) {
@@ -1175,12 +1044,8 @@
   async function guardarNuevoLibro() {
     if (!parsedPreview) {
       analizarTexto();
-      if (!parsedPreview) {
-        toast('No se detectó texto válido. Subí un archivo TXT o pegá el texto.');
-        return;
-      }
+      if (!parsedPreview) { toast('No se detectó texto válido'); return; }
     }
-
     const btn = $('#addGuardar');
     btn.disabled = true;
     btn.textContent = 'Guardando…';
@@ -1188,23 +1053,14 @@
     try {
       const parsed = parsedPreview;
       const nuevoId = uid();
-
       let thumbnail = null;
       if (coverBlob) {
         try {
           const small = await comprimirThumbnail(coverBlob, 200, 0.7);
           thumbnail = await blobToDataURL(small);
-        } catch (e) {
-          console.warn('Error al procesar portada:', e);
-        }
+        } catch (e) {}
       }
-
-      const contenidoLibro = {
-        id: nuevoId,
-        capitulos: parsed.capitulos,
-        secciones: parsed.secciones
-      };
-
+      const contenidoLibro = { id: nuevoId, capitulos: parsed.capitulos, secciones: parsed.secciones };
       const entrada = {
         id: nuevoId,
         titulo: parsed.titulo || 'Sin título',
@@ -1219,7 +1075,6 @@
         fecha: Date.now(),
         progreso: 0
       };
-
       localStorage.setItem(`libro-${nuevoId}.json`, JSON.stringify(contenidoLibro));
       biblioteca.libros.push(entrada);
       localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
@@ -1228,14 +1083,11 @@
         try {
           await guardarLibroEnGist(nuevoId, contenidoLibro);
           await guardarBiblioteca(true);
-          toast('✓ Libro guardado y sincronizado');
-        } catch (syncErr) {
-          toast('✓ Libro guardado localmente');
-        }
+          toast('✓ Guardado y sincronizado');
+        } catch (e) { toast('✓ Guardado local'); }
       } else {
-        toast('✓ Libro guardado localmente');
+        toast('✓ Guardado local');
       }
-
       $('#addModal').close();
       render();
     } catch (e) {
@@ -1253,7 +1105,7 @@
     if (nuevoTitulo === null) return;
     const nuevoAutor = prompt('Autor:', l.autor || '');
     if (nuevoAutor === null) return;
-    const nuevaCat = prompt('Categoría (general, ficcion, ciencia, filosofia, psicologia, desarrollo, historia, biografia, negocios, terror, poesia):', l.categoria);
+    const nuevaCat = prompt('Categoría:', l.categoria);
     if (nuevaCat === null) return;
     l.titulo = nuevoTitulo.trim() || l.titulo;
     l.autor = nuevoAutor.trim();
@@ -1265,38 +1117,34 @@
     render();
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // BORRADO ROBUSTO: borra local primero, Gist en background
-  // ═══════════════════════════════════════════════════════════════
   async function eliminarReview() {
     if (!libroActualReview) return;
     const l = libroActualReview;
-    if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará de tu biblioteca.`)) return;
+    if (!confirm(`¿Eliminar «${l.titulo}»?`)) return;
 
-    // 1. Borrar local INMEDIATAMENTE
+    // Borrar local primero (instantáneo)
     localStorage.removeItem(`libro-${l.id}.json`);
     biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
     addEliminado(l.id);
 
-    // 2. Cerrar modal y refrescar vista al instante
     $('#reviewModal').close();
     render();
     toast('Libro eliminado');
 
-    // 3. Intentar borrar del Gist en background (sin bloquear)
+    // Intentar Gist en background
     if (tieneSync()) {
       try {
         await eliminarLibroDeGist(l.id);
         await guardarBiblioteca(true);
         toast('✓ Eliminado también del Gist');
       } catch (e) {
-        console.warn('No se pudo borrar del Gist:', e.message);
-        toast('⚠ Eliminado local. Gist falló: ' + e.message);
+        toast('⚠ Local OK, Gist falló');
       }
     }
   }
 
+  /* ═══ EVENTOS ═══ */
   $('#grid').addEventListener('click', (e) => {
     const playBtn = e.target.closest('.card-play');
     if (playBtn) {
@@ -1354,31 +1202,26 @@
   $('#addCerrar').addEventListener('click', () => $('#addModal').close());
   $('#addCancelar').addEventListener('click', () => $('#addModal').close());
   $('#addGuardar').addEventListener('click', guardarNuevoLibro);
-  
+
   $('#addArchivo').addEventListener('change', async (e) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
+    if (!files || !files.length) return;
     for (const file of files) {
       const isText = file.type.startsWith('text/') || /\.(txt|md|text)$/i.test(file.name);
       const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.name);
-      
       if (isText) {
         try {
           const texto = await leerArchivoTexto(file);
           $('#addTexto').value = texto;
           analizarTexto();
-          toast('✓ Texto cargado: ' + file.name);
-        } catch (err) {
-          toast('Error al leer: ' + err.message);
-        }
+          toast('✓ Texto: ' + file.name);
+        } catch (err) { toast('Error: ' + err.message); }
       } else if (isImage) {
         coverBlob = file;
         mostrarPreviewPortada(file);
-        toast('✓ Portada cargada: ' + file.name);
+        toast('✓ Portada: ' + file.name);
       }
     }
-    
     e.target.value = '';
   });
 
@@ -1388,12 +1231,9 @@
   });
 
   $('#addBuscarPortada').addEventListener('click', async () => {
-    if (!parsedPreview || !parsedPreview.titulo) { 
+    if (!parsedPreview?.titulo) {
       analizarTexto();
-      if (!parsedPreview || !parsedPreview.titulo) {
-        toast('Primero cargá el texto para saber el título'); 
-        return; 
-      }
+      if (!parsedPreview?.titulo) { toast('Cargá el texto primero'); return; }
     }
     toast('Buscando portada…');
     try {
@@ -1402,9 +1242,7 @@
         coverBlob = small;
         mostrarPreviewPortada(small);
         toast('✓ Portada encontrada');
-      } else {
-        toast('No se encontró portada');
-      }
+      } else { toast('No se encontró portada'); }
     } catch (e) { toast('Error: ' + e.message); }
   });
 
@@ -1422,27 +1260,25 @@
         }
       }
       toast('No hay imágenes en el portapapeles');
-    } catch (e) {
-      toast('Error al leer el portapapeles. Asegúrate de dar permisos.');
-    }
+    } catch (e) { toast('Error: ' + e.message); }
   });
 
   $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
   $('#syncGuardar').addEventListener('click', async () => {
     localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
     localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
-    toast('✓ Configuración guardada');
+    toast('✓ Guardado');
     $('#syncModal').close();
     await cargarBiblioteca();
     render();
   });
   $('#btnBorrarSync').addEventListener('click', () => {
-    if (!confirm('¿Borrar configuración de sync?\n\nTus libros NO se borran (solo la config).')) return;
+    if (!confirm('¿Borrar config de sync?')) return;
     localStorage.removeItem(SYNC_TOKEN_KEY);
     localStorage.removeItem(SYNC_GIST_KEY);
     $('#syncToken').value = '';
     $('#syncGistId').value = '';
-    toast('Configuración borrada');
+    toast('Config borrada');
     $('#sSync').textContent = '—';
   });
   $('#btnProbarSync').addEventListener('click', async () => {
@@ -1454,7 +1290,7 @@
       localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
       const u = await ghRequest('GET', '/user');
       st.className = 'sync-status ok';
-      st.textContent = `✅ Conexión OK. User: ${u.login}`;
+      st.textContent = `✅ OK. User: ${u.login}`;
     } catch (e) {
       st.className = 'sync-status err';
       st.textContent = '❌ ' + e.message;
@@ -1496,7 +1332,7 @@
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v13 cargado');
+    console.log('✅ index.html v14 cargado');
   })();
 })();
 </script>

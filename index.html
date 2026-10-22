@@ -189,7 +189,7 @@
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .author{margin:2px 0 0;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* NUEVO: Reseña en la tarjeta */
+  /* Reseña en la tarjeta */
   .resena-card {
     margin: 4px 0 0;
     font-size: .75rem;
@@ -425,33 +425,35 @@
       </button>
     </header>
     <div class="modal-body">
-      <p class="hint">Pegá el texto del libro con el formato estructurado o subí un archivo.<br>
-      <strong>Campos:</strong> <code>Título:</code>, <code>Autor:</code>, <code>Año:</code>, <code>Categoría:</code>, <code>Reseña:</code><br>
-      <strong>Capítulos:</strong> <code>## Capítulo 1: [nombre]</code><br>
-      <strong>Subsecciones:</strong> <code>### Resumen</code>, <code>### Puntos importantes</code>, <code>### Aplicación</code>, <code>### Enseñanza</code>, <code>### Preguntas</code></p>
+      <p class="hint">Subí el archivo de texto (TXT) y la imagen de portada (JPG/PNG) al mismo tiempo, o pegá el texto.<br>
+      <strong>Formato del TXT:</strong> <code>Título:</code>, <code>Autor:</code>, <code>Reseña:</code>, <code>## Capítulo</code>, <code>### Sección</code>.</p>
       
       <div class="field">
-        <label for="addArchivo">Subir archivo de texto (.txt, .md)</label>
-        <input type="file" id="addArchivo" accept=".txt,.md,text/plain" />
+        <label for="addArchivo">Subir archivos (TXT y JPG/PNG)</label>
+        <input type="file" id="addArchivo" accept=".txt,.md,.jpg,.jpeg,.png" multiple />
       </div>
 
       <div class="field">
         <label for="addTexto">Texto completo del libro</label>
-        <textarea id="addTexto" placeholder="Título: Mi libro&#10;Autor: Mi autor&#10;Año: 2024&#10;Categoría: psicologia&#10;Reseña: Una breve descripción del libro...&#10;&#10;## Capítulo 1: Introducción&#10;### Resumen&#10;Aquí va el resumen...&#10;### Puntos importantes&#10;...&#10;### Preguntas&#10;1. ¿Pregunta 1?&#10;2. ¿Pregunta 2?" style="min-height:280px"></textarea>
+        <textarea id="addTexto" placeholder="Pegá el texto aquí si no subís un archivo..." style="min-height:200px"></textarea>
       </div>
+
       <div class="field">
-        <label for="addPortada">URL de portada (opcional)</label>
-        <div style="display:flex;gap:6px">
-          <input type="url" id="addPortada" placeholder="https://... o dejá vacío para buscar auto" style="flex:1" />
-          <button type="button" class="btn btn-ghost btn-sm" id="addBuscarPortada" style="flex-shrink:0">🔍 Auto</button>
+        <label>Portada</label>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+          <button type="button" class="btn btn-ghost btn-sm" id="addBuscarPortada">🔍 Buscar en Google</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnPegarPortada">📋 Pegar del Portapapeles</button>
+        </div>
+        <div id="addCoverPreview" style="display:none; width:100px; height:140px; border-radius:6px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,.2);">
+          <img src="" style="width:100%; height:100%; object-fit:cover;">
         </div>
       </div>
+
       <div id="addPreview" style="padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);display:none"></div>
     </div>
     <footer class="modal-foot">
-      <button type="button" class="btn btn-ghost" id="addAnalizar">Analizar</button>
       <button type="button" class="btn btn-ghost" id="addCancelar">Cancelar</button>
-      <button type="button" class="btn btn-primary" id="addGuardar">Guardar y subir</button>
+      <button type="button" class="btn btn-primary" id="addGuardar">Guardar Libro</button>
     </footer>
   </div>
 </dialog>
@@ -542,6 +544,9 @@
   let ttsActivo = false;
   let mejorVoz = null;
 
+  let parsedPreview = null;
+  let coverBlob = null;
+
   const CATEGORIAS = [
     { id:'general', nombre:'General', c1:'#6366f1', c2:'#8b5cf6' },
     { id:'ficcion', nombre:'Ficción', c1:'#ec4899', c2:'#f43f5e' },
@@ -616,7 +621,7 @@
     return res.json();
   }
 
-  /* ═══ CARGAR BIBLIOTECA (desde Gist o cache) ═══ */
+  /* ═══ CARGAR BIBLIOTECA ═══ */
   async function cargarBiblioteca() {
     if (tieneSync()) {
       try {
@@ -635,7 +640,6 @@
         console.warn('Sync falló, usando cache:', e.message);
       }
     }
-    // Fallback a cache local
     try {
       const cache = localStorage.getItem(LS_CACHE_BIB);
       if (cache) {
@@ -679,7 +683,7 @@
     });
   }
 
-  /* ═══ PARSEAR TEXTO ESTRUCTURADO (MEJORADO) ═══ */
+  /* ═══ PARSEAR TEXTO ═══ */
   function parsearTextoEstructurado(texto) {
     const lineas = texto.split('\n');
     const resultado = {
@@ -687,8 +691,8 @@
       capitulos: [], secciones: []
     };
 
-    let actual = null; // { tipo: 'cap' | 'sec', obj }
-    let subActual = null; // 'resumen' | 'puntos' | 'aplicacion' | 'enseñanza' | 'preguntas' | null
+    let actual = null;
+    let subActual = null;
     let buffer = [];
     let enReseña = false;
     let reseñaBuffer = [];
@@ -722,7 +726,6 @@
       let linea = lineas[i];
       let lineaTrim = linea.trim();
 
-      // Detectar título en negrita sin campo (ej: **¡No más un Tipo Lindo!**)
       if (!resultado.titulo && /^\*\*[^*]+\*\*$/.test(lineaTrim)) {
         const m = lineaTrim.match(/^\*\*([^*]+)\*\*$/);
         if (m) {
@@ -731,7 +734,6 @@
         }
       }
 
-      // Normalizar campos en negrita: **Campo:** valor  ->  Campo: valor
       const mBoldField = lineaTrim.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)$/);
       if (mBoldField) {
         const campo = mBoldField[1].trim();
@@ -739,7 +741,6 @@
         lineaTrim = `${campo}: ${valor}`;
       }
 
-      // Campos de cabecera
       const mTitulo = lineaTrim.match(/^T[íi]tulo:\s*(.+)$/i);
       const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
       const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
@@ -763,8 +764,6 @@
         continue;
       }
 
-      // Capítulos y secciones
-      // Primero subsections (###)
       if (lineaTrim.startsWith('### ')) {
         flushBuffer();
         const sub = normalizar(lineaTrim.slice(4).trim());
@@ -777,7 +776,6 @@
         continue;
       }
 
-      // Chapters (## or #)
       if (lineaTrim.startsWith('## ') || lineaTrim.startsWith('# ')) {
         flushBuffer();
         flushReseña();
@@ -806,7 +804,6 @@
         continue;
       }
 
-      // Contenido
       if (enReseña) {
         reseñaBuffer.push(linea);
       } else if (actual) {
@@ -819,7 +816,7 @@
     return resultado;
   }
 
-  /* ═══ PORTADA AUTO (Google Books + OpenLibrary) ═══ */
+  /* ═══ PORTADA AUTO ═══ */
   async function buscarPortadaAuto(titulo, autor) {
     if (!titulo) return null;
     function timeout(p, ms) { return Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]); }
@@ -852,7 +849,6 @@
         }
       } catch {}
     }
-    // Fallback Open Library
     try {
       const q = encodeURIComponent(`${titulo} ${autor||''}`.trim());
       const res = await timeout(fetch(`https://openlibrary.org/search.json?q=${q}&limit=10`), 8000);
@@ -903,7 +899,7 @@
     });
   }
 
-  /* ═══ TTS PARA RESEÑA ═══ */
+  /* ═══ TTS ═══ */
   function elegirMejorVoz() {
     if (!('speechSynthesis' in window)) return null;
     const voces = window.speechSynthesis.getVoices() || [];
@@ -1085,47 +1081,58 @@
   }
 
   /* ═══ ADD MODAL ═══ */
-  let parsedPreview = null;
-
   function abrirAdd() {
     $('#addTitulo').textContent = 'Añadir libro';
     $('#addTexto').value = '';
-    $('#addPortada').value = '';
+    $('#addArchivo').value = '';
     $('#addPreview').style.display = 'none';
     $('#addPreview').innerHTML = '';
+    $('#addCoverPreview').style.display = 'none';
+    $('#addCoverPreview').querySelector('img').src = '';
     parsedPreview = null;
+    coverBlob = null;
     $('#addModal').showModal();
   }
 
   function analizarTexto() {
     const texto = $('#addTexto').value.trim();
-    if (!texto) { toast('Pegá el texto primero'); return; }
+    if (!texto) { return; }
     try {
       const parsed = parsearTextoEstructurado(texto);
       const totalCaps = (parsed.capitulos.length || 0) + parsed.secciones.reduce((a, s) => a + (s.capitulos?.length || 0), 0);
-      if (!parsed.titulo && totalCaps === 0) { toast('No se detectó contenido válido'); return; }
+      if (!parsed.titulo && totalCaps === 0) { return; }
       parsedPreview = parsed;
 
       let html = `<div style="font-size:.85rem;line-height:1.6">
         <strong>Detectado:</strong><br>
         📖 Título: ${esc(parsed.titulo || '(sin título)')}<br>
         ✍️ Autor: ${esc(parsed.autor || '(sin autor)')}<br>
-        📅 Año: ${esc(parsed.año || '—')}<br>
         🏷️ Categoría: ${esc(getCat(parsed.categoria).nombre)}<br>
-        📝 Reseña: ${parsed.reseña ? parsed.reseña.slice(0, 100) + (parsed.reseña.length > 100 ? '…' : '') : '(sin reseña)'}<br>
-        📚 Capítulos: ${totalCaps}<br>
-        📑 Secciones: ${parsed.secciones.length}
+        📚 Capítulos: ${totalCaps}
       </div>`;
       $('#addPreview').innerHTML = html;
       $('#addPreview').style.display = 'block';
-      toast('✓ Análisis correcto');
     } catch (e) {
-      toast('Error al analizar: ' + e.message);
+      console.warn('Error al analizar:', e);
     }
   }
 
+  function mostrarPreviewPortada(blob) {
+    const url = URL.createObjectURL(blob);
+    const preview = $('#addCoverPreview');
+    preview.querySelector('img').src = url;
+    preview.style.display = 'block';
+  }
+
   async function guardarNuevoLibro() {
-    if (!parsedPreview) { toast('Analizá el texto primero'); return; }
+    // Auto-analizar si no se ha hecho
+    if (!parsedPreview) {
+      analizarTexto();
+      if (!parsedPreview) {
+        toast('No se detectó texto válido. Subí un archivo o pegá el texto.');
+        return;
+      }
+    }
     if (!tieneSync()) { toast('Configurá el sync primero'); return; }
 
     const btn = $('#addGuardar');
@@ -1136,40 +1143,22 @@
       const parsed = parsedPreview;
       const nuevoId = uid();
 
-      // Portada
       let thumbnail = null;
-      let portadaUrl = $('#addPortada').value.trim();
-      if (portadaUrl) {
+      if (coverBlob) {
         try {
-          const res = await fetchConTimeout(portadaUrl, { mode: 'cors' }, 15000);
-          if (res.ok) {
-            const blob = await res.blob();
-            if (blob.type.startsWith('image/')) {
-              const small = await comprimirThumbnail(blob, 200, 0.7);
-              thumbnail = await blobToDataURL(small);
-            }
-          }
+          const small = await comprimirThumbnail(coverBlob, 200, 0.7);
+          thumbnail = await blobToDataURL(small);
         } catch (e) {
-          console.warn('Portada URL falló:', e.message);
-        }
-      }
-      if (!thumbnail && parsed.titulo) {
-        try {
-          const small = await buscarPortadaAuto(parsed.titulo, parsed.autor);
-          if (small) thumbnail = await blobToDataURL(small);
-        } catch (e) {
-          console.warn('Búsqueda auto falló:', e.message);
+          console.warn('Error al procesar portada:', e);
         }
       }
 
-      // Contenido del libro
       const contenidoLibro = {
         id: nuevoId,
         capitulos: parsed.capitulos,
         secciones: parsed.secciones
       };
 
-      // Entrada en la biblioteca (metadata liviana)
       const entrada = {
         id: nuevoId,
         titulo: parsed.titulo || 'Sin título',
@@ -1185,23 +1174,22 @@
         progreso: 0
       };
 
-      // Subir libro + biblioteca a Gist
       await guardarLibroEnGist(nuevoId, contenidoLibro);
       biblioteca.libros.push(entrada);
       await guardarBiblioteca(true);
 
-      toast('✓ Libro guardado y subido');
+      toast('✓ Libro guardado correctamente');
       $('#addModal').close();
       render();
     } catch (e) {
       toast('Error: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Guardar y subir';
+      btn.textContent = 'Guardar Libro';
     }
   }
 
-  /* ═══ EDITOR (solo metadata) ═══ */
+  /* ═══ EDITOR ═══ */
   async function editarReview() {
     if (!libroActualReview) return;
     const l = libroActualReview;
@@ -1287,27 +1275,49 @@
 
   $('#addCerrar').addEventListener('click', () => $('#addModal').close());
   $('#addCancelar').addEventListener('click', () => $('#addModal').close());
-  $('#addAnalizar').addEventListener('click', analizarTexto);
   $('#addGuardar').addEventListener('click', guardarNuevoLibro);
   
-  // Subir archivo
+  // Manejo de Archivos Múltiples
   $('#addArchivo').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const texto = await file.text();
-    $('#addTexto').value = texto;
-    toast('Archivo cargado');
-    analizarTexto(); // Auto-analizar
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    for (const file of files) {
+      if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+        const texto = await file.text();
+        $('#addTexto').value = texto;
+        analizarTexto();
+        toast('Texto cargado');
+      } else if (file.type.startsWith('image/')) {
+        coverBlob = file;
+        mostrarPreviewPortada(file);
+        toast('Portada cargada');
+      }
+    }
   });
 
+  // Analizar en tiempo real al pegar texto
+  $('#addTexto').addEventListener('input', () => {
+    clearTimeout(window._addTextoDebounce);
+    window._addTextoDebounce = setTimeout(analizarTexto, 500);
+  });
+
+  // Botón Buscar Portada
   $('#addBuscarPortada').addEventListener('click', async () => {
-    if (!parsedPreview || !parsedPreview.titulo) { toast('Analizá el texto primero'); return; }
+    if (!parsedPreview || !parsedPreview.titulo) { 
+      // Si no se ha analizado, intentar analizar primero
+      analizarTexto();
+      if (!parsedPreview || !parsedPreview.titulo) {
+        toast('Primero cargá el texto para saber el título'); 
+        return; 
+      }
+    }
     toast('Buscando portada…');
     try {
       const small = await buscarPortadaAuto(parsedPreview.titulo, parsedPreview.autor);
       if (small) {
-        const url = await blobToDataURL(small);
-        $('#addPortada').value = url;
+        coverBlob = small;
+        mostrarPreviewPortada(small);
         toast('✓ Portada encontrada');
       } else {
         toast('No se encontró portada');
@@ -1315,6 +1325,27 @@
     } catch (e) { toast('Error: ' + e.message); }
   });
 
+  // Botón Pegar del Portapapeles
+  $('#btnPegarPortada').addEventListener('click', async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          coverBlob = blob;
+          mostrarPreviewPortada(blob);
+          toast('✓ Imagen pegada');
+          return;
+        }
+      }
+      toast('No hay imágenes en el portapapeles');
+    } catch (e) {
+      toast('Error al leer el portapapeles. Asegúrate de dar permisos.');
+    }
+  });
+
+  // Modales de Sync y Settings (sin cambios)
   $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
   $('#syncGuardar').addEventListener('click', async () => {
     localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());

@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light" data-font="md" data-icons="md">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#6366f1" />
+<title>Mi Biblioteca Personal</title>
+
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
+<link rel="manifest" href="manifest.json?v=11" />
+
+<script>
+  try{
+    document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light';
+    document.documentElement.dataset.font = localStorage.getItem('fontSize') || 'md';
+    document.documentElement.dataset.icons = localStorage.getItem('iconSize') || 'md';
+  }catch(e){}
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js?v=11').catch(()=>{});
+    });
+  }
+</script>
+
+<style>
+  :root{
+    --bg:#f4f4f8; --surface:#ffffff; --surface-2:#fafafc;
+    --text:#12121a; --muted:#6b7280; --border:#e7e7ee;
+    --accent:#6366f1; --accent-2:#8b5cf6;
+    --star:#f59e0b; --danger:#e11d48; --ok:#10b981; --nota:#eab308;
+    --fav:#ef4444; --seccion:#0ea5e9;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+    --shadow-md:0 2px 4px rgba(16,24,40,.04), 0 12px 28px -14px rgba(16,24,40,.25);
+    --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --font-base: 16px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+    --card-cover-w: 72px; --card-cover-h: 100px;
+  }
+  [data-font="sm"]{ --font-base: 14px; }
+  [data-font="md"]{ --font-base: 16px; }
+  [data-font="lg"]{ --font-base: 18px; }
+  [data-font="xl"]{ --font-base: 20px; }
+  [data-icons="sm"]{ --icon-sm: 14px; --icon-md: 16px; --icon-lg: 20px; --card-cover-w: 56px; --card-cover-h: 80px; }
+  [data-icons="md"]{ --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px; --card-cover-w: 72px; --card-cover-h: 100px; }
+  [data-icons="lg"]{ --icon-sm: 18px; --icon-md: 24px; --icon-lg: 30px; --card-cover-w: 88px; --card-cover-h: 122px; }
+  [data-theme="dark"]{
+    --bg:#0a0a10; --surface:#14141d; --surface-2:#1a1a24;
+    --text:#f2f2f7; --muted:#9aa0ae; --border:#262632;
+    --accent:#818cf8; --accent-2:#a78bfa;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.5);
+    --shadow-md:0 2px 4px rgba(0,0,0,.35), 0 14px 32px -16px rgba(0,0,0,.9);
+    --shadow-lg:0 30px 70px -20px rgba(0,0,0,.9);
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--text);line-height:1.6;
+    font-size: var(--font-base);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(900px 500px at 12% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+      radial-gradient(800px 500px at 92% -6%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%);
+    background-repeat:no-repeat;min-height:100vh;
+  }
+  .container{max-width:1120px;margin:0 auto;padding:0 18px}
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    background:color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter:saturate(180%) blur(14px);
+    -webkit-backdrop-filter:saturate(180%) blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand-mark{
+    width:38px;height:38px;border-radius:11px;flex-shrink:0;
+    background:linear-gradient(140deg,var(--accent),var(--accent-2));
+    display:grid;place-items:center;color:#fff;
+    box-shadow:0 6px 16px -6px color-mix(in srgb, var(--accent) 75%, transparent);
+  }
+  .brand-mark svg{width:var(--icon-md);height:var(--icon-md)}
+  .brand h1{margin:0;font-size:1.02rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .brand-sub{margin:1px 0 0;font-size:.74rem;color:var(--muted)}
+  .topbar-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+  .btn{
+    font:inherit;font-size:.88rem;font-weight:600;border:1px solid transparent;
+    border-radius:11px;padding:9px 14px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    white-space:nowrap;transition:.16s;
+  }
+  .btn:active{transform:scale(.975)}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;
+    box-shadow:0 6px 18px -8px color-mix(in srgb, var(--accent) 90%, transparent);}
+  .btn-primary:hover{filter:brightness(1.06)}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .btn-ghost{background:var(--surface);color:var(--text);border-color:var(--border);box-shadow:var(--shadow-sm)}
+  .btn-ghost:hover{background:var(--surface-2)}
+  .btn-danger{background:transparent;color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%, var(--border))}
+  .btn-danger:hover{background:color-mix(in srgb,var(--danger) 10%, transparent)}
+  .btn-sm{padding:7px 11px;font-size:.8rem;border-radius:9px}
+  .icon-btn{
+    width:38px;height:38px;border-radius:11px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);cursor:pointer;
+    display:grid;place-items:center;transition:.16s;flex-shrink:0;
+    box-shadow:var(--shadow-sm);
+  }
+  .icon-btn:hover{color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%, var(--border))}
+  .icon-btn svg{width:var(--icon-md);height:var(--icon-md)}
+
+  .hero{padding:26px 0 6px}
+  .hero-title{margin:0;font-size:clamp(1.5rem,4.4vw,2.3rem);line-height:1.15;letter-spacing:-.03em;font-weight:800}
+  .grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero-sub{margin:8px 0 0;color:var(--muted);font-size:.92rem;max-width:52ch}
+  .stats{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:13px;
+    padding:9px 14px;display:flex;flex-direction:column;gap:1px;box-shadow:var(--shadow-sm);min-width:88px}
+  .stat strong{font-size:1.1rem;letter-spacing:-.02em;line-height:1.2}
+  .stat span{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+  .toolbar{display:flex;gap:9px;margin:20px 0 16px;flex-wrap:wrap}
+  .search-wrap{position:relative;flex:1;min-width:220px}
+  .search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;width:var(--icon-sm);height:var(--icon-sm)}
+  .search-wrap input, .toolbar select{
+    font:inherit;font-size:.92rem;padding:11px 14px;border:1px solid var(--border);
+    border-radius:11px;background:var(--surface);color:var(--text);outline:none;
+    transition:.16s;box-shadow:var(--shadow-sm);width:100%;
+  }
+  .search-wrap input{padding-left:42px}
+  .search-wrap input:focus, .toolbar select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%, transparent)}
+  .toolbar select{width:auto;flex-shrink:0;cursor:pointer;padding-right:34px;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 13px center;}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{
+    font:inherit;font-size:.78rem;font-weight:600;
+    padding:6px 4px 6px 11px;border-radius:20px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted);cursor:pointer;transition:.16s;
+    white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+  }
+  .chip:hover{color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%, var(--border))}
+  .chip.active{background:color-mix(in srgb,var(--accent) 15%, transparent);color:var(--accent);border-color:var(--accent)}
+  .chip.chip-fav.active{background:color-mix(in srgb,var(--fav) 14%, transparent);color:var(--fav);border-color:color-mix(in srgb,var(--fav) 50%, var(--border))}
+  .chip-count{
+    font-size:.7rem;font-weight:800;min-width:22px;height:20px;padding:0 6px;border-radius:11px;
+    background:var(--surface-2);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid var(--border);line-height:1;
+  }
+  .chip.active .chip-count{background:color-mix(in srgb,var(--accent) 25%, transparent);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%, transparent)}
+  .chip.chip-fav.active .chip-count{background:color-mix(in srgb,var(--fav) 25%, transparent);color:var(--fav);border-color:color-mix(in srgb,var(--fav) 45%, transparent)}
+
+  main{padding-bottom:70px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(290px,1fr))}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:15px;display:flex;flex-direction:column;gap:11px;cursor:pointer;
+    box-shadow:var(--shadow-sm);transition:.22s;animation:rise .3s ease backwards;
+    position:relative;overflow:hidden;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media(hover:hover){
+    .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);border-color:color-mix(in srgb,var(--accent) 32%, var(--border))}
+  }
+  .cover{
+    width:var(--card-cover-w);height:var(--card-cover-h);border-radius:4px 10px 10px 4px;flex-shrink:0;
+    background:linear-gradient(145deg,var(--c1,#6366f1),var(--c2,#8b5cf6));
+    display:grid;place-items:center;color:#fff;
+    font-family:var(--serif);font-size:1.6rem;font-weight:700;
+    position:relative;overflow:hidden;
+    box-shadow:inset -7px 0 12px -7px rgba(0,0,0,.55), 0 6px 14px -7px rgba(0,0,0,.55);
+  }
+  .cover::after{content:'';position:absolute;left:6px;top:0;bottom:0;width:1.5px;background:rgba(255,255,255,.3);pointer-events:none}
+  .cover img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+  .card.read{background:color-mix(in srgb,var(--ok) 4%, var(--surface))}
+  .badge-read{
+    position:absolute;top:0;right:0;
+    background:linear-gradient(135deg,#10b981,#059669);color:#fff;
+    font-size:.66rem;font-weight:800;padding:4px 9px 4px 11px;
+    border-bottom-left-radius:10px;letter-spacing:.04em;
+    display:flex;align-items:center;gap:4px;z-index:2;
+    box-shadow:0 2px 6px rgba(16,185,129,.35);
+  }
+  .badge-read svg{width:10px;height:10px}
+  .card-top{display:flex;gap:12px;align-items:flex-start}
+  .card-head{min-width:0;flex:1}
+  .card-head h3{margin:0;font-size:.98rem;line-height:1.3;letter-spacing:-.015em;font-weight:700;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  .author{margin:2px 0 0;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .meta-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .pill{
+    font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:20px;
+    background:var(--surface-2);color:var(--muted);border:1px solid var(--border);
+    min-width:52px;text-align:center;justify-content:center;
+    display:inline-flex;align-items:center;gap:3px;line-height:1.1;height:20px;white-space:nowrap;
+  }
+  .pill.pct{background:color-mix(in srgb,var(--ok) 15%, transparent);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%, transparent);font-weight:800}
+  .pill.pct.full{background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-color:transparent}
+  .pill.fav{background:color-mix(in srgb,var(--fav) 14%, transparent);color:var(--fav);border-color:color-mix(in srgb,var(--fav) 35%, transparent)}
+  .pill.star{background:color-mix(in srgb,var(--star) 14%, transparent);color:var(--star);border-color:color-mix(in srgb,var(--star) 35%, transparent)}
+
+  .empty{text-align:center;padding:56px 22px;color:var(--muted);
+    background:var(--surface);border:1px dashed var(--border);border-radius:18px}
+  .empty h3{margin:0 0 6px;color:var(--text);font-size:1rem}
+  .empty p{margin:0;font-size:.88rem}
+  .empty .btn{margin-top:16px}
+
+  dialog{border:none;padding:0;margin:auto;color:var(--text);font-family:inherit;background:var(--surface);border-radius:18px;box-shadow:var(--shadow-lg)}
+  dialog::backdrop{background:rgba(10,10,16,.55);backdrop-filter:blur(4px)}
+  dialog[open]{animation:pop .18s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+  #reviewModal{width:min(560px,94vw);max-height:90vh}
+  #addModal{width:min(720px,96vw);max-height:94vh}
+  #syncModal{width:min(560px,94vw);max-height:90vh}
+  #settingsModal{width:min(560px,94vw);max-height:90vh}
+  @media(max-width:640px){
+    #reviewModal{width:100vw;height:auto;max-height:85vh;border-radius:16px;width:92vw}
+    #addModal{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+    #syncModal,#settingsModal{width:92vw;height:auto;max-height:85vh;border-radius:16px}
+  }
+  .modal-wrap{display:flex;flex-direction:column;max-height:94vh}
+  @media(max-width:640px){#addModal .modal-wrap{height:100dvh;max-height:100dvh}}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+  .modal-head h2{margin:0;font-size:1rem;letter-spacing:-.02em}
+  .modal-body{padding:18px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:13px;flex:1}
+  .modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--border);background:var(--surface-2);flex-shrink:0}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .field label{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .field input,.field textarea,.field select{font:inherit;font-size:.92rem;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);color:var(--text);outline:none;transition:.16s;width:100%}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%, transparent)}
+  .field textarea{resize:vertical;min-height:90px;line-height:1.6;font-family:ui-monospace,Monaco,monospace;font-size:.85rem}
+  .hint{font-size:.78rem;color:var(--muted);margin:0}
+  .hint strong{color:var(--text)}
+  .hint code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:.72rem;border:1px solid var(--border)}
+  .sync-status{padding:10px 12px;border-radius:10px;font-size:.85rem;display:none}
+  .sync-status.ok{background:color-mix(in srgb,var(--ok) 12%, transparent);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 30%, transparent);display:block}
+  .sync-status.err{background:color-mix(in srgb,var(--danger) 10%, transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 30%, transparent);display:block}
+  .sync-status.info{background:color-mix(in srgb,var(--accent) 10%, transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%, transparent);display:block}
+
+  .review-cover{width:120px;height:170px;border-radius:6px 12px 12px 6px;
+    background:linear-gradient(145deg,#6366f1,#8b5cf6);display:grid;place-items:center;color:#fff;
+    font-family:var(--serif);font-size:2.4rem;font-weight:700;position:relative;overflow:hidden;
+    box-shadow:0 12px 28px -12px rgba(0,0,0,.5);margin:0 auto}
+  .review-cover img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+  .review-info{text-align:center;padding:4px 0}
+  .review-info h3{margin:0;font-family:var(--serif);font-size:1.3rem;line-height:1.2;letter-spacing:-.02em}
+  .review-info .autor{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+  .review-info .meta-row{justify-content:center;margin-top:10px}
+  .review-resena{margin-top:14px;padding:14px;background:var(--surface-2);border-radius:12px;border:1px solid var(--border);
+    font-family:var(--serif);font-size:1rem;line-height:1.7;color:var(--text)}
+  .review-resena-label{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+  .tts-btn-mini{font:inherit;font-size:.72rem;font-weight:700;background:color-mix(in srgb,var(--accent) 15%, transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 35%, transparent);padding:5px 9px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+  .tts-btn-mini:hover{background:color-mix(in srgb,var(--accent) 25%, transparent)}
+  .tts-btn-mini.activo{background:var(--accent);color:#fff}
+
+  #toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);background:var(--text);color:var(--bg);padding:11px 20px;border-radius:12px;font-size:.87rem;font-weight:600;opacity:0;pointer-events:none;transition:.25s;z-index:100;box-shadow:var(--shadow-lg);max-width:90vw;text-align:center}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media(max-width:640px){
+    .brand-sub{display:none}
+    .brand h1{font-size:.94rem}
+    .brand-mark{width:34px;height:34px;border-radius:10px}
+    .topbar-actions .btn-label{display:none}
+    .topbar-actions .btn{padding:9px 11px}
+    .topbar-actions{gap:6px}
+    .hero{padding:22px 0 4px}
+    .hero-title{font-size:1.35rem}
+    .hero-sub{font-size:.85rem}
+    .stats{gap:7px}
+    .stat{flex:1;min-width:0;padding:8px 10px;border-radius:11px}
+    .stat strong{font-size:.98rem}
+    .stat span{font-size:.62rem;letter-spacing:.04em}
+    .toolbar{gap:8px}
+    .search-wrap{order:1;flex-basis:100%}
+    .toolbar select{order:2;flex:1;width:auto;min-width:0;font-size:.82rem;padding:9px 30px 9px 11px}
+    .chips{overflow-x:auto;flex-wrap:nowrap;padding-bottom:6px;margin-bottom:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chips .chip{font-size:.72rem;padding:6px 3px 6px 10px;flex-shrink:0}
+    .chips .chip-count{font-size:.66rem;min-width:20px;height:18px}
+    .grid:not(.list-view){grid-template-columns:repeat(2, minmax(0,1fr));gap:10px}
+    .grid .card{padding:10px;gap:8px;border-radius:14px;flex-direction:column;align-items:stretch}
+    .grid .card-top{flex-direction:column;gap:8px;align-items:stretch}
+    .grid .cover{width:100%;height:170px;border-radius:6px 6px 4px 4px;font-size:2.4rem}
+    .grid .cover::after{display:none}
+    .grid .card-head h3{font-size:.82rem;-webkit-line-clamp:2;line-height:1.25}
+    .grid .author{font-size:.68rem}
+    .grid .meta-row{gap:3px;margin-top:4px}
+    .grid .pill{font-size:.58rem;padding:2px 6px;min-width:42px;height:17px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Mi Biblioteca</h1>
+        <p class="brand-sub">Mis lecturas, mis resúmenes</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="btnSettings" title="Ajustes" aria-label="Ajustes">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="btnSync" title="Configurar sync" aria-label="Sync">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
+        </svg>
+      </button>
+      <button class="btn btn-primary" id="btnAdd">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="btn-label">Añadir</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <h2 class="hero-title">Mi <span class="grad">Biblioteca</span> Personal</h2>
+    <p class="hero-sub">Mis lecturas, mis resúmenes, mis notas.</p>
+    <div class="stats">
+      <div class="stat"><strong id="sLibros">0</strong><span>Libros</span></div>
+      <div class="stat"><strong id="sLeidos">0</strong><span>Leídos</span></div>
+      <div class="stat"><strong id="sSync">—</strong><span>Sync</span></div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>
+      </svg>
+      <input type="search" id="busqueda" placeholder="Buscar por título o autor…" autocomplete="off" />
+    </div>
+    <select id="orden" aria-label="Ordenar">
+      <option value="titulo" selected>Título A–Z</option>
+      <option value="autor">Autor A–Z</option>
+      <option value="recientes">Recientes</option>
+    </select>
+  </div>
+
+  <div class="chips" id="chips">
+    <button class="chip active" data-filter="todos">Todos <span class="chip-count" data-count="todos">0</span></button>
+    <button class="chip chip-fav" data-filter="favoritos">❤ Favoritos <span class="chip-count" data-count="favoritos">0</span></button>
+    <button class="chip" data-filter="leidos">Leídos <span class="chip-count" data-count="leidos">0</span></button>
+    <button class="chip" data-filter="en-progreso">En progreso <span class="chip-count" data-count="en-progreso">0</span></button>
+    <button class="chip" data-filter="no-leidos">No leídos <span class="chip-count" data-count="no-leidos">0</span></button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div id="vacio"></div>
+</main>
+
+<dialog id="reviewModal">
+  <div class="modal-wrap">
+    <header class="modal-head">
+      <h2 id="revTituloHead">Reseña</h2>
+      <button type="button" class="icon-btn" id="revCerrar" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <div class="review-cover" id="revCover"></div>
+      <div class="review-info">
+        <h3 id="revTitulo"></h3>
+        <p class="autor" id="revAutor"></p>
+        <div class="meta-row" id="revMeta"></div>
+      </div>
+      <div class="review-resena" id="revResenaWrap">
+        <div class="review-resena-label">
+          <span>Reseña del libro</span>
+          <button type="button" class="tts-btn-mini" id="revTtsBtn" title="Escuchar reseña">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Escuchar
+          </button>
+        </div>
+        <div id="revResena"></div>
+      </div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="revEditar">Editar</button>
+      <button type="button" class="btn btn-danger btn-sm" id="revEliminar">Eliminar</button>
+      <button type="button" class="btn btn-primary" id="revLeer" style="flex:1">📖 Leer libro</button>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="addModal">
+  <div class="modal-wrap">
+    <header class="modal-head">
+      <h2 id="addTitulo">Añadir libro</h2>
+      <button type="button" class="icon-btn" id="addCerrar" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="hint">Pegá el texto del libro con el formato estructurado.<br>
+      <strong>Campos:</strong> <code>Título:</code>, <code>Autor:</code>, <code>Año:</code>, <code>Categoría:</code>, <code>Reseña:</code><br>
+      <strong>Capítulos:</strong> <code># Capítulo 1: [nombre]</code><br>
+      <strong>Subsecciones:</strong> <code>## Resumen</code>, <code>## Puntos importantes</code>, <code>## Aplicación</code>, <code>## Enseñanza</code>, <code>## Preguntas</code></p>
+      <div class="field">
+        <label for="addTexto">Texto completo del libro</label>
+        <textarea id="addTexto" placeholder="Título: Mi libro&#10;Autor: Mi autor&#10;Año: 2024&#10;Categoría: psicologia&#10;Reseña: Una breve descripción del libro...&#10;&#10;# Capítulo 1: Introducción&#10;## Resumen&#10;Aquí va el resumen...&#10;## Puntos importantes&#10;...&#10;## Preguntas&#10;1. ¿Pregunta 1?&#10;2. ¿Pregunta 2?" style="min-height:280px"></textarea>
+      </div>
+      <div class="field">
+        <label for="addPortada">URL de portada (opcional)</label>
+        <div style="display:flex;gap:6px">
+          <input type="url" id="addPortada" placeholder="https://... o dejá vacío para buscar auto" style="flex:1" />
+          <button type="button" class="btn btn-ghost btn-sm" id="addBuscarPortada" style="flex-shrink:0">🔍 Auto</button>
+        </div>
+      </div>
+      <div id="addPreview" style="padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);display:none"></div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="addAnalizar">Analizar</button>
+      <button type="button" class="btn btn-ghost" id="addCancelar">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="addGuardar">Guardar y subir</button>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="syncModal">
+  <div class="modal-wrap">
+    <header class="modal-head">
+      <h2>Configurar sincronización</h2>
+      <button type="button" class="icon-btn" id="syncCerrar" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <p class="hint">Necesitás un <strong>token de GitHub</strong> (con scope <code>gist</code>) y el <strong>ID de un Gist secreto</strong> donde se guardará tu biblioteca.</p>
+      <div class="field">
+        <label for="syncToken">Token de GitHub</label>
+        <input type="password" id="syncToken" placeholder="ghp_..." autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="syncGistId">ID del Gist</label>
+        <input type="text" id="syncGistId" placeholder="2decf6c462d9b4418f2" autocomplete="off" />
+      </div>
+      <div class="sync-status" id="syncStatus"></div>
+      <button type="button" class="btn btn-ghost" id="btnProbarSync" style="width:100%">🧪 Probar conexión</button>
+      <button type="button" class="btn btn-danger btn-sm" id="btnBorrarSync" style="width:100%;margin-top:4px">🗑️ Borrar configuración</button>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-primary" id="syncGuardar">Guardar</button>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="settingsModal">
+  <div class="modal-wrap">
+    <header class="modal-head">
+      <h2>Ajustes de vista</h2>
+      <button type="button" class="icon-btn" id="setCerrar" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div class="modal-body">
+      <div class="field">
+        <label>Tema</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="themeOpts">
+          <button type="button" class="btn btn-ghost btn-sm" data-theme="light">☀️ Claro</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-theme="dark">🌙 Oscuro</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tamaño de letra</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="fontOpts">
+          <button type="button" class="btn btn-ghost btn-sm" data-font="sm">Pequeña</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-font="md">Normal</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-font="lg">Grande</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-font="xl">Muy grande</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tamaño de iconos y portadas</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="iconOpts">
+          <button type="button" class="btn btn-ghost btn-sm" data-icons="sm">Pequeños</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-icons="md">Normal</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-icons="lg">Grandes</button>
+        </div>
+      </div>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn btn-primary" id="setCerrar2">Listo</button>
+    </footer>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (s) => document.querySelector(s);
+  const SYNC_TOKEN_KEY = 'biblioteca-sync-token';
+  const SYNC_GIST_KEY = 'biblioteca-sync-gist';
+  const LS_CACHE_BIB = 'biblioteca-cache-v11';
+
+  let biblioteca = { version: 2, libros: [], preferencias: {} };
+  let libroActualReview = null;
+  let filtroActivo = 'todos';
+  let busquedaTimer = null;
+  let ttsActivo = false;
+  let mejorVoz = null;
+
+  const CATEGORIAS = [
+    { id:'general', nombre:'General', c1:'#6366f1', c2:'#8b5cf6' },
+    { id:'ficcion', nombre:'Ficción', c1:'#ec4899', c2:'#f43f5e' },
+    { id:'ciencia', nombre:'Ciencia', c1:'#0ea5e9', c2:'#06b6d4' },
+    { id:'filosofia', nombre:'Filosofía', c1:'#8b5cf6', c2:'#d946ef' },
+    { id:'psicologia', nombre:'Psicología', c1:'#10b981', c2:'#059669' },
+    { id:'desarrollo', nombre:'Desarrollo personal', c1:'#f59e0b', c2:'#ef4444' },
+    { id:'historia', nombre:'Historia', c1:'#a16207', c2:'#78350f' },
+    { id:'biografia', nombre:'Biografía', c1:'#3b82f6', c2:'#6366f1' },
+    { id:'negocios', nombre:'Negocios', c1:'#14b8a6', c2:'#0ea5e9' },
+    { id:'terror', nombre:'Terror', c1:'#1f2937', c2:'#7f1d1d' },
+    { id:'poesia', nombre:'Poesía', c1:'#db2777', c2:'#f472b6' }
+  ];
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+  const nPalabras = (t) => { const s = String(t||'').trim(); return s ? s.split(/\s+/).length : 0; };
+  const normalizar = (s) => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+
+  function getCat(id) { return CATEGORIAS.find(c => c.id === id) || CATEGORIAS[0]; }
+  function colorLibro(l) { const c = getCat(l.categoria); return [c.c1, c.c2]; }
+
+  let toastTimer = null;
+  function toast(msg) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2300);
+  }
+
+  /* ═══ CONFIG SYNC ═══ */
+  function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
+  function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
+  function tieneSync() { return getToken() && getGistId(); }
+
+  async function fetchConTimeout(url, opts = {}, ms = 20000) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try { const r = await fetch(url, { ...opts, signal: ctrl.signal }); clearTimeout(t); return r; }
+    catch (e) { clearTimeout(t); throw e; }
+  }
+
+  async function ghRequest(method, path, body) {
+    const token = getToken();
+    const gistId = getGistId();
+    if (!token || !gistId) throw new Error('Falta token o Gist ID');
+    let res;
+    try {
+      res = await fetchConTimeout(`https://api.github.com${path}`, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('Timeout de conexión');
+      if (/failed to fetch/i.test(e.message)) throw new Error('No se pudo conectar (¿sin internet o AdBlock bloqueando github.com?)');
+      throw e;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      let msg = err.message || `HTTP ${res.status}`;
+      if (res.status === 401) msg = 'Token inválido. Generá uno nuevo con scope "gist".';
+      if (res.status === 403) msg = 'Token sin permisos (necesita scope "gist").';
+      if (res.status === 404) msg = 'Gist no encontrado. Verificá el ID.';
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  /* ═══ CARGAR BIBLIOTECA (desde Gist o cache) ═══ */
+  async function cargarBiblioteca() {
+    if (tieneSync()) {
+      try {
+        const gist = await ghRequest('GET', `/gists/${getGistId()}`);
+        const file = gist.files && gist.files['biblioteca.json'];
+        if (file) {
+          const contenido = file.truncated
+            ? await (await fetchConTimeout(file.raw_url)).text()
+            : file.content;
+          biblioteca = JSON.parse(contenido);
+          localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+          $('#sSync').textContent = '✓';
+          return;
+        }
+      } catch (e) {
+        console.warn('Sync falló, usando cache:', e.message);
+      }
+    }
+    // Fallback a cache local
+    try {
+      const cache = localStorage.getItem(LS_CACHE_BIB);
+      if (cache) {
+        biblioteca = JSON.parse(cache);
+        $('#sSync').textContent = '⚠';
+        return;
+      }
+    } catch {}
+    biblioteca = { version: 2, libros: [], preferencias: {} };
+    $('#sSync').textContent = '—';
+  }
+
+  async function guardarBiblioteca(silencioso = false) {
+    if (!tieneSync()) { toast('Configurá el sync primero'); return false; }
+    try {
+      await ghRequest('PATCH', `/gists/${getGistId()}`, {
+        files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
+      });
+      localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+      $('#sSync').textContent = '✓';
+      if (!silencioso) toast('✓ Biblioteca sincronizada');
+      return true;
+    } catch (e) {
+      $('#sSync').textContent = '⚠';
+      toast('Error: ' + e.message);
+      return false;
+    }
+  }
+
+  async function guardarLibroEnGist(libroId, contenidoLibro) {
+    if (!tieneSync()) throw new Error('Falta configurar sync');
+    await ghRequest('PATCH', `/gists/${getGistId()}`, {
+      files: { [`libro-${libroId}.json`]: { content: JSON.stringify(contenidoLibro) } }
+    });
+  }
+
+  async function eliminarLibroDeGist(libroId) {
+    if (!tieneSync()) throw new Error('Falta configurar sync');
+    await ghRequest('PATCH', `/gists/${getGistId()}`, {
+      files: { [`libro-${libroId}.json`]: null }
+    });
+  }
+
+  /* ═══ PARSEAR TEXTO ESTRUCTURADO ═══ */
+  function parsearTextoEstructurado(texto) {
+    const lineas = texto.split('\n');
+    const resultado = {
+      titulo: '', autor: '', año: '', categoria: 'general', reseña: '',
+      capitulos: [], secciones: []
+    };
+
+    let actual = null; // { tipo: 'cap' | 'sec', obj }
+    let subActual = null; // 'resumen' | 'puntos' | 'aplicacion' | 'enseñanza' | 'preguntas' | null
+    let buffer = [];
+    let enReseña = false;
+    let reseñaBuffer = [];
+
+    function flushBuffer() {
+      if (!actual) return;
+      const txt = buffer.join('\n').trim();
+      if (!txt) return;
+      if (subActual === 'resumen') actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
+      else if (subActual === 'puntos') actual.obj.puntos = (actual.obj.puntos ? actual.obj.puntos + '\n\n' : '') + txt;
+      else if (subActual === 'aplicacion') actual.obj.aplicacion = (actual.obj.aplicacion ? actual.obj.aplicacion + '\n\n' : '') + txt;
+      else if (subActual === 'enseñanza' || subActual === 'ensenanza') actual.obj.enseñanza = (actual.obj.enseñanza ? actual.obj.enseñanza + '\n\n' : '') + txt;
+      else if (subActual === 'preguntas') {
+        const preguntas = txt.split(/\n+/).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+        actual.obj.preguntas = (actual.obj.preguntas || []).concat(preguntas);
+      } else {
+        actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
+      }
+      buffer = [];
+    }
+
+    function flushReseña() {
+      if (enReseña && reseñaBuffer.length) {
+        resultado.reseña = reseñaBuffer.join('\n').trim();
+      }
+      enReseña = false;
+      reseñaBuffer = [];
+    }
+
+    for (let i = 0; i < lineas.length; i++) {
+      const linea = lineas[i];
+      const lineaTrim = linea.trim();
+
+      // Campos de cabecera
+      const mTitulo = lineaTrim.match(/^T[íi]tulo:\s*(.+)$/i);
+      const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
+      const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
+      const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
+      const mReseña = lineaTrim.match(/^Rese[ñn]a:\s*(.*)$/i);
+
+      if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
+      if (mAutor) { resultado.autor = mAutor[1].trim(); continue; }
+      if (mAño) { resultado.año = mAño[1].trim(); continue; }
+      if (mCat) {
+        const catNorm = normalizar(mCat[1]);
+        const catEncontrada = CATEGORIAS.find(c => normalizar(c.id) === catNorm || normalizar(c.nombre) === catNorm);
+        resultado.categoria = catEncontrada ? catEncontrada.id : 'general';
+        continue;
+      }
+      if (mReseña) {
+        flushBuffer();
+        flushReseña();
+        enReseña = true;
+        if (mReseña[1].trim()) reseñaBuffer.push(mReseña[1].trim());
+        continue;
+      }
+
+      // Capítulos y secciones (# ...)
+      if (lineaTrim.startsWith('# ')) {
+        flushBuffer();
+        flushReseña();
+        const titulo = lineaTrim.slice(2).trim();
+        const esParte = /^(parte|secci[oó]n|libro)\s+/i.test(titulo);
+        if (esParte) {
+          const sec = { id: uid(), titulo, capitulos: [] };
+          resultado.secciones.push(sec);
+          actual = { tipo: 'sec', obj: sec, currentCap: null };
+          subActual = null;
+        } else {
+          const cap = { id: uid(), titulo, resumen: '', puntos: '', aplicacion: '', enseñanza: '', preguntas: [], notas: [], ttsIndice: 0 };
+          if (actual && actual.tipo === 'sec') {
+            actual.obj.capitulos.push(cap);
+          } else {
+            resultado.capitulos.push(cap);
+          }
+          actual = { tipo: 'cap', obj: cap };
+          subActual = null;
+        }
+        continue;
+      }
+
+      // Subsecciones (## ...)
+      if (lineaTrim.startsWith('## ')) {
+        flushBuffer();
+        const sub = normalizar(lineaTrim.slice(3).trim());
+        if (/^resumen/.test(sub)) subActual = 'resumen';
+        else if (/^puntos?\s*importantes/.test(sub)) subActual = 'puntos';
+        else if (/^aplicaci[oó]n/.test(sub)) subActual = 'aplicacion';
+        else if (/^ensen|^ense[ñn]anza/.test(sub)) subActual = 'enseñanza';
+        else if (/^preguntas/.test(sub)) subActual = 'preguntas';
+        else subActual = 'resumen';
+        continue;
+      }
+
+      // Contenido
+      if (enReseña) {
+        reseñaBuffer.push(linea);
+      } else if (actual) {
+        buffer.push(linea);
+      }
+    }
+    flushBuffer();
+    flushReseña();
+
+    return resultado;
+  }
+
+  /* ═══ PORTADA AUTO (Google Books + OpenLibrary) ═══ */
+  async function buscarPortadaAuto(titulo, autor) {
+    if (!titulo) return null;
+    function timeout(p, ms) { return Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]); }
+    const querys = [];
+    if (autor) querys.push(`intitle:${titulo} inauthor:${autor}`);
+    querys.push(`intitle:${titulo}`);
+    if (autor) querys.push(`${titulo} ${autor}`);
+    for (const q of querys) {
+      try {
+        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`;
+        const res = await timeout(fetch(url), 8000);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data.items) continue;
+        for (const item of data.items) {
+          const vi = item.volumeInfo;
+          if (!vi) continue;
+          let coverUrl = (vi.imageLinks && (vi.imageLinks.thumbnail || vi.imageLinks.smallThumbnail)) || null;
+          if (!coverUrl && item.id) coverUrl = `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=2`;
+          if (!coverUrl) continue;
+          coverUrl = coverUrl.replace(/^http:/, 'https:');
+          try {
+            const imgRes = await timeout(fetch(coverUrl, { mode: 'cors' }), 6000);
+            if (!imgRes.ok) continue;
+            const blob = await imgRes.blob();
+            if (blob.type.startsWith('image/') && blob.size > 2000) {
+              return await comprimirThumbnail(blob);
+            }
+          } catch {}
+        }
+      } catch {}
+    }
+    // Fallback Open Library
+    try {
+      const q = encodeURIComponent(`${titulo} ${autor||''}`.trim());
+      const res = await timeout(fetch(`https://openlibrary.org/search.json?q=${q}&limit=10`), 8000);
+      if (res.ok) {
+        const data = await res.json();
+        for (const doc of (data.docs || [])) {
+          if (doc.cover_i) {
+            try {
+              const imgRes = await timeout(fetch(`https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`, { mode: 'cors' }), 6000);
+              if (imgRes.ok) {
+                const blob = await imgRes.blob();
+                if (blob.type.startsWith('image/') && blob.size > 2000) {
+                  return await comprimirThumbnail(blob);
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+    return null;
+  }
+
+  async function comprimirThumbnail(blob, maxW = 200, quality = 0.7) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width: w, height: h } = img;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob((out) => resolve(out || blob), 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
+      img.src = url;
+    });
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  /* ═══ TTS PARA RESEÑA ═══ */
+  function elegirMejorVoz() {
+    if (!('speechSynthesis' in window)) return null;
+    const voces = window.speechSynthesis.getVoices() || [];
+    const es = voces.filter(v => /^es/i.test(v.lang));
+    const pool = es.length ? es : voces;
+    if (!pool.length) return null;
+    function puntuar(v) {
+      let p = 0;
+      const n = (v.name||'').toLowerCase(), l = (v.lang||'').toLowerCase();
+      if (l === 'es-es') p += 40;
+      else if (l.startsWith('es-')) p += 25;
+      if (n.includes('neural') || n.includes('enhanced') || n.includes('premium')) p += 40;
+      if (n.includes('siri') || n.includes('google')) p += 20;
+      return p;
+    }
+    mejorVoz = pool.map(v => ({v, p: puntuar(v)})).sort((a,b) => b.p - a.p)[0]?.v || null;
+    return mejorVoz;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => elegirMejorVoz();
+    elegirMejorVoz();
+  }
+
+  function hablarReseña() {
+    if (!('speechSynthesis' in window)) { toast('Sin soporte de voz'); return; }
+    const texto = $('#revResena').textContent.trim();
+    if (!texto) return;
+    if (ttsActivo) {
+      window.speechSynthesis.cancel();
+      ttsActivo = false;
+      $('#revTtsBtn').classList.remove('activo');
+      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
+      return;
+    }
+    if (!mejorVoz) elegirMejorVoz();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'es-ES';
+    u.rate = 1;
+    if (mejorVoz) { u.voice = mejorVoz; u.lang = mejorVoz.lang || 'es-ES'; }
+    u.onend = () => {
+      ttsActivo = false;
+      $('#revTtsBtn').classList.remove('activo');
+      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
+    };
+    u.onerror = () => {
+      ttsActivo = false;
+      $('#revTtsBtn').classList.remove('activo');
+    };
+    try {
+      window.speechSynthesis.speak(u);
+      ttsActivo = true;
+      $('#revTtsBtn').classList.add('activo');
+      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Pausar';
+    } catch {}
+  }
+
+  /* ═══ RENDER ═══ */
+  function libroEnProgreso(l) { return l.progreso > 0 && !l.leido; }
+
+  function listaFiltrada() {
+    const q = normalizar($('#busqueda').value);
+    const orden = $('#orden').value;
+    let out = biblioteca.libros.filter(l => {
+      if (filtroActivo === 'favoritos' && !l.favorito) return false;
+      if (filtroActivo === 'leidos' && !l.leido) return false;
+      if (filtroActivo === 'en-progreso' && !libroEnProgreso(l)) return false;
+      if (filtroActivo === 'no-leidos' && (l.leido || libroEnProgreso(l))) return false;
+      if (q) {
+        if (!normalizar(l.titulo).includes(q) && !normalizar(l.autor).includes(q)) return false;
+      }
+      return true;
+    });
+    const cmp = {
+      titulo: (a,b) => normalizar(a.titulo).localeCompare(normalizar(b.titulo), 'es'),
+      autor: (a,b) => normalizar(a.autor).localeCompare(normalizar(b.autor), 'es'),
+      recientes: (a,b) => (b.fecha||0) - (a.fecha||0)
+    }[orden] || ((a,b) => 0);
+    return out.sort(cmp);
+  }
+
+  function renderContadores() {
+    const counts = {
+      todos: biblioteca.libros.length,
+      favoritos: biblioteca.libros.filter(l => l.favorito).length,
+      leidos: biblioteca.libros.filter(l => l.leido).length,
+      'en-progreso': biblioteca.libros.filter(l => libroEnProgreso(l)).length,
+      'no-leidos': biblioteca.libros.filter(l => !l.leido && !libroEnProgreso(l)).length
+    };
+    for (const k in counts) {
+      const el = document.querySelector(`.chip-count[data-count="${k}"]`);
+      if (el) el.textContent = counts[k];
+    }
+    $('#sLibros').textContent = counts.todos;
+    $('#sLeidos').textContent = counts.leidos;
+  }
+
+  function render() {
+    renderContadores();
+    const lista = listaFiltrada();
+    const grid = $('#grid');
+    const vacio = $('#vacio');
+
+    if (!lista.length) {
+      grid.innerHTML = '';
+      if (biblioteca.libros.length === 0) {
+        vacio.innerHTML = `<div class="empty">
+          <h3>Tu biblioteca está vacía</h3>
+          <p>Toca «Añadir» para cargar tu primer libro.</p>
+          <button class="btn btn-primary" onclick="document.getElementById('btnAdd').click()">Añadir libro</button>
+        </div>`;
+      } else {
+        vacio.innerHTML = `<div class="empty"><h3>Sin resultados</h3><p>Probá otro filtro o búsqueda.</p></div>`;
+      }
+      return;
+    }
+    vacio.innerHTML = '';
+    grid.innerHTML = lista.map((l, i) => {
+      const cat = getCat(l.categoria);
+      const [c1, c2] = [cat.c1, cat.c2];
+      const inicial = esc(((l.titulo||'?').trim()[0]||'?').toUpperCase());
+      const pct = l.progreso || 0;
+      const pctClass = pct >= 100 ? 'full' : '';
+      return `
+        <article class="card ${l.leido ? 'read' : ''}" data-id="${l.id}" tabindex="0" role="button" style="animation-delay:${Math.min(i*20,200)}ms">
+          ${l.leido ? `<div class="badge-read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>LEÍDO</div>` : ''}
+          <div class="card-top">
+            <div class="cover" style="--c1:${c1};--c2:${c2}">
+              ${l.thumbnail ? `<img src="${l.thumbnail}" alt="">` : inicial}
+            </div>
+            <div class="card-head">
+              <h3>${esc(l.titulo)}</h3>
+              ${l.autor ? `<p class="author">${esc(l.autor)}</p>` : ''}
+              <div class="meta-row">
+                <span class="pill" style="background:color-mix(in srgb, ${cat.c1} 15%, transparent);color:${cat.c1};border-color:color-mix(in srgb, ${cat.c1} 40%, transparent)">${cat.nombre}</span>
+                <span class="pill pct ${pctClass}">${pct}%</span>
+                ${l.favorito ? `<span class="pill fav">❤ Fav</span>` : ''}
+                ${l.puntos > 0 ? `<span class="pill star">${l.puntos}★</span>` : ''}
+              </div>
+            </div>
+          </div>
+        </article>`;
+    }).join('');
+  }
+
+  /* ═══ REVIEW MODAL ═══ */
+  function abrirReview(id) {
+    const l = biblioteca.libros.find(x => x.id === id);
+    if (!l) return;
+    libroActualReview = l;
+
+    $('#revTituloHead').textContent = l.titulo;
+    $('#revTitulo').textContent = l.titulo;
+    $('#revAutor').textContent = l.autor || '';
+    const cat = getCat(l.categoria);
+    const meta = [
+      `<span class="pill" style="background:color-mix(in srgb, ${cat.c1} 15%, transparent);color:${cat.c1};border-color:color-mix(in srgb, ${cat.c1} 40%, transparent)">${cat.nombre}</span>`,
+      l.leido ? `<span class="pill pct full">100%</span>` : `<span class="pill pct">${l.progreso || 0}%</span>`
+    ];
+    if (l.año) meta.push(`<span class="pill">${esc(l.año)}</span>`);
+    if (l.favorito) meta.push(`<span class="pill fav">❤ Fav</span>`);
+    $('#revMeta').innerHTML = meta.join('');
+
+    const cover = $('#revCover');
+    if (l.thumbnail) {
+      cover.innerHTML = `<img src="${l.thumbnail}" alt="">`;
+      cover.style.background = 'transparent';
+    } else {
+      const [c1, c2] = colorLibro(l);
+      cover.style.background = `linear-gradient(145deg, ${c1}, ${c2})`;
+      cover.textContent = ((l.titulo||'?').trim()[0]||'?').toUpperCase();
+    }
+
+    const resena = (l.reseña || '').trim();
+    $('#revResena').textContent = resena || 'Sin reseña disponible.';
+    $('#revResenaWrap').style.display = resena ? '' : 'none';
+
+    $('#reviewModal').showModal();
+  }
+
+  /* ═══ ADD MODAL ═══ */
+  let parsedPreview = null;
+
+  function abrirAdd() {
+    $('#addTitulo').textContent = 'Añadir libro';
+    $('#addTexto').value = '';
+    $('#addPortada').value = '';
+    $('#addPreview').style.display = 'none';
+    $('#addPreview').innerHTML = '';
+    parsedPreview = null;
+    $('#addModal').showModal();
+  }
+
+  function analizarTexto() {
+    const texto = $('#addTexto').value.trim();
+    if (!texto) { toast('Pegá el texto primero'); return; }
+    try {
+      const parsed = parsearTextoEstructurado(texto);
+      const totalCaps = (parsed.capitulos.length || 0) + parsed.secciones.reduce((a, s) => a + (s.capitulos?.length || 0), 0);
+      if (!parsed.titulo && totalCaps === 0) { toast('No se detectó contenido válido'); return; }
+      parsedPreview = parsed;
+
+      let html = `<div style="font-size:.85rem;line-height:1.6">
+        <strong>Detectado:</strong><br>
+        📖 Título: ${esc(parsed.titulo || '(sin título)')}<br>
+        ✍️ Autor: ${esc(parsed.autor || '(sin autor)')}<br>
+        📅 Año: ${esc(parsed.año || '—')}<br>
+        🏷️ Categoría: ${esc(getCat(parsed.categoria).nombre)}<br>
+        📝 Reseña: ${parsed.reseña ? parsed.reseña.slice(0, 100) + (parsed.reseña.length > 100 ? '…' : '') : '(sin reseña)'}<br>
+        📚 Capítulos: ${totalCaps}<br>
+        📑 Secciones: ${parsed.secciones.length}
+      </div>`;
+      $('#addPreview').innerHTML = html;
+      $('#addPreview').style.display = 'block';
+      toast('✓ Análisis correcto');
+    } catch (e) {
+      toast('Error al analizar: ' + e.message);
+    }
+  }
+
+  async function guardarNuevoLibro() {
+    if (!parsedPreview) { toast('Analizá el texto primero'); return; }
+    if (!tieneSync()) { toast('Configurá el sync primero'); return; }
+
+    const btn = $('#addGuardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+
+    try {
+      const parsed = parsedPreview;
+      const nuevoId = uid();
+
+      // Portada
+      let thumbnail = null;
+      let portadaUrl = $('#addPortada').value.trim();
+      if (portadaUrl) {
+        try {
+          const res = await fetchConTimeout(portadaUrl, { mode: 'cors' }, 15000);
+          if (res.ok) {
+            const blob = await res.blob();
+            if (blob.type.startsWith('image/')) {
+              const small = await comprimirThumbnail(blob, 200, 0.7);
+              thumbnail = await blobToDataURL(small);
+            }
+          }
+        } catch (e) {
+          console.warn('Portada URL falló:', e.message);
+        }
+      }
+      if (!thumbnail && parsed.titulo) {
+        try {
+          const small = await buscarPortadaAuto(parsed.titulo, parsed.autor);
+          if (small) thumbnail = await blobToDataURL(small);
+        } catch (e) {
+          console.warn('Búsqueda auto falló:', e.message);
+        }
+      }
+
+      // Contenido del libro
+      const contenidoLibro = {
+        id: nuevoId,
+        capitulos: parsed.capitulos,
+        secciones: parsed.secciones
+      };
+
+      // Entrada en la biblioteca (metadata liviana)
+      const entrada = {
+        id: nuevoId,
+        titulo: parsed.titulo || 'Sin título',
+        autor: parsed.autor || '',
+        año: parsed.año || '',
+        categoria: parsed.categoria || 'general',
+        reseña: parsed.reseña || '',
+        thumbnail: thumbnail,
+        leido: false,
+        favorito: false,
+        puntos: 0,
+        fecha: Date.now(),
+        progreso: 0
+      };
+
+      // Subir libro + biblioteca a Gist
+      await guardarLibroEnGist(nuevoId, contenidoLibro);
+      biblioteca.libros.push(entrada);
+      await guardarBiblioteca(true);
+
+      toast('✓ Libro guardado y subido');
+      $('#addModal').close();
+      render();
+    } catch (e) {
+      toast('Error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar y subir';
+    }
+  }
+
+  /* ═══ EDITOR (solo metadata) ═══ */
+  async function editarReview() {
+    if (!libroActualReview) return;
+    const l = libroActualReview;
+    const nuevoTitulo = prompt('Título:', l.titulo);
+    if (nuevoTitulo === null) return;
+    const nuevoAutor = prompt('Autor:', l.autor || '');
+    if (nuevoAutor === null) return;
+    const nuevaCat = prompt('Categoría (general, ficcion, ciencia, filosofia, psicologia, desarrollo, historia, biografia, negocios, terror, poesia):', l.categoria);
+    if (nuevaCat === null) return;
+    l.titulo = nuevoTitulo.trim() || l.titulo;
+    l.autor = nuevoAutor.trim();
+    const catNorm = normalizar(nuevaCat);
+    const catEncontrada = CATEGORIAS.find(c => normalizar(c.id) === catNorm || normalizar(c.nombre) === catNorm);
+    if (catEncontrada) l.categoria = catEncontrada.id;
+    await guardarBiblioteca();
+    abrirReview(l.id);
+    render();
+  }
+
+  async function eliminarReview() {
+    if (!libroActualReview) return;
+    const l = libroActualReview;
+    if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará también del Gist.`)) return;
+    try {
+      await eliminarLibroDeGist(l.id);
+      biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
+      await guardarBiblioteca(true);
+      toast('Libro eliminado');
+      $('#reviewModal').close();
+      render();
+    } catch (e) {
+      toast('Error: ' + e.message);
+    }
+  }
+
+  /* ═══ EVENTOS ═══ */
+  $('#grid').addEventListener('click', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    abrirReview(card.dataset.id);
+  });
+
+  $('#busqueda').addEventListener('input', () => {
+    clearTimeout(busquedaTimer);
+    busquedaTimer = setTimeout(render, 180);
+  });
+  $('#orden').addEventListener('change', render);
+
+  $('#chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    filtroActivo = chip.dataset.filter;
+    render();
+  });
+
+  $('#btnAdd').addEventListener('click', abrirAdd);
+  $('#btnSettings').addEventListener('click', () => {
+    aplicarConfigVisual();
+    $('#settingsModal').showModal();
+  });
+  $('#btnSync').addEventListener('click', () => {
+    $('#syncToken').value = getToken();
+    $('#syncGistId').value = getGistId();
+    $('#syncStatus').className = 'sync-status';
+    $('#syncStatus').textContent = '';
+    $('#syncModal').showModal();
+  });
+
+  $('#revCerrar').addEventListener('click', () => {
+    if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
+    $('#reviewModal').close();
+  });
+  $('#revTtsBtn').addEventListener('click', hablarReseña);
+  $('#revEditar').addEventListener('click', editarReview);
+  $('#revEliminar').addEventListener('click', eliminarReview);
+  $('#revLeer').addEventListener('click', () => {
+    if (!libroActualReview) return;
+    if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
+    window.location.href = `lector.html?libro=${encodeURIComponent(libroActualReview.id)}`;
+  });
+
+  $('#addCerrar').addEventListener('click', () => $('#addModal').close());
+  $('#addCancelar').addEventListener('click', () => $('#addModal').close());
+  $('#addAnalizar').addEventListener('click', analizarTexto);
+  $('#addGuardar').addEventListener('click', guardarNuevoLibro);
+  $('#addBuscarPortada').addEventListener('click', async () => {
+    if (!parsedPreview || !parsedPreview.titulo) { toast('Analizá el texto primero'); return; }
+    toast('Buscando portada…');
+    try {
+      const small = await buscarPortadaAuto(parsedPreview.titulo, parsedPreview.autor);
+      if (small) {
+        const url = await blobToDataURL(small);
+        $('#addPortada').value = url;
+        toast('✓ Portada encontrada');
+      } else {
+        toast('No se encontró portada');
+      }
+    } catch (e) { toast('Error: ' + e.message); }
+  });
+
+  $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
+  $('#syncGuardar').addEventListener('click', async () => {
+    localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
+    localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
+    toast('✓ Configuración guardada');
+    $('#syncModal').close();
+    await cargarBiblioteca();
+    render();
+  });
+  $('#btnBorrarSync').addEventListener('click', () => {
+    if (!confirm('¿Borrar configuración de sync?\n\nTus libros NO se borran (solo la config).')) return;
+    localStorage.removeItem(SYNC_TOKEN_KEY);
+    localStorage.removeItem(SYNC_GIST_KEY);
+    localStorage.removeItem(LS_CACHE_BIB);
+    $('#syncToken').value = '';
+    $('#syncGistId').value = '';
+    toast('Configuración borrada');
+    biblioteca = { version: 2, libros: [], preferencias: {} };
+    render();
+    $('#sSync').textContent = '—';
+  });
+  $('#btnProbarSync').addEventListener('click', async () => {
+    const st = $('#syncStatus');
+    st.className = 'sync-status info';
+    st.textContent = 'Probando…';
+    try {
+      localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
+      localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
+      const u = await ghRequest('GET', '/user');
+      st.className = 'sync-status ok';
+      st.textContent = `✅ Conexión OK. User: ${u.login}`;
+    } catch (e) {
+      st.className = 'sync-status err';
+      st.textContent = '❌ ' + e.message;
+    }
+  });
+
+  $('#setCerrar').addEventListener('click', () => $('#settingsModal').close());
+  $('#setCerrar2').addEventListener('click', () => $('#settingsModal').close());
+  $('#themeOpts').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-theme]'); if (!b) return;
+    localStorage.setItem('tema', b.dataset.theme);
+    aplicarConfigVisual();
+  });
+  $('#fontOpts').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-font]'); if (!b) return;
+    localStorage.setItem('fontSize', b.dataset.font);
+    aplicarConfigVisual();
+  });
+  $('#iconOpts').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-icons]'); if (!b) return;
+    localStorage.setItem('iconSize', b.dataset.icons);
+    aplicarConfigVisual();
+  });
+
+  function aplicarConfigVisual() {
+    const t = localStorage.getItem('tema') || 'light';
+    const f = localStorage.getItem('fontSize') || 'md';
+    const i = localStorage.getItem('iconSize') || 'md';
+    document.documentElement.dataset.theme = t;
+    document.documentElement.dataset.font = f;
+    document.documentElement.dataset.icons = i;
+    document.querySelectorAll('#themeOpts [data-theme]').forEach(b => b.classList.toggle('btn-primary', b.dataset.theme === t));
+    document.querySelectorAll('#fontOpts [data-font]').forEach(b => b.classList.toggle('btn-primary', b.dataset.font === f));
+    document.querySelectorAll('#iconOpts [data-icons]').forEach(b => b.classList.toggle('btn-primary', b.dataset.icons === i));
+  }
+
+  /* ═══ INIT ═══ */
+  (async function init() {
+    aplicarConfigVisual();
+    await cargarBiblioteca();
+    render();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if (tieneSync()) {
+      setTimeout(async () => {
+        await cargarBiblioteca();
+        render();
+      }, 8000);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,11 +1,11 @@
-const CACHE_NAME = 'biblioteca-v11';
+const CACHE_NAME = 'biblioteca-v13';
 const ASSETS = ['./', './index.html', './lector.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(ASSETS).catch(() => {}))
-      .then(() => self.skipWaiting())
   );
 });
 

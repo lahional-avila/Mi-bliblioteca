@@ -26,7 +26,6 @@
   [data-theme="parchment"]{
     --bg:#e8dcc8; --paper:#f5e6d3; --ink:#3e2c1c; --muted:#8a735b;
     --border:#c9b89a; --accent:#8b5e3c; --accent-2:#c19a6b;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -34,6 +33,9 @@
     background:var(--bg); color:var(--ink);
     font-family:var(--sans); line-height:1.6; min-height:100vh;
     -webkit-font-smoothing:antialiased;
+  }
+  [data-theme="parchment"] body{
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
   }
 
   /* Header */
@@ -60,7 +62,7 @@
     overflow-wrap:anywhere;
     display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
   }
-  .actions{display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:wrap}
+  .actions{display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:wrap; position:relative}
   .icon-btn{
     width:38px; height:38px; border-radius:10px;
     background:transparent; border:1px solid var(--border); color:var(--muted);
@@ -79,6 +81,24 @@
     height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2));
     width:0%; transition:width .2s;
   }
+
+  /* Theme picker */
+  .theme-picker{
+    position:absolute; top:50px; right:10px;
+    background:var(--paper); border:1px solid var(--border);
+    border-radius:12px; padding:6px;
+    display:none; flex-direction:column; gap:2px;
+    box-shadow:0 10px 30px -10px rgba(0,0,0,.3);
+    z-index:60; min-width:160px;
+  }
+  .theme-picker.open{ display:flex }
+  .theme-picker button{
+    font:inherit; font-size:.85rem; padding:8px 14px;
+    border-radius:8px; border:none; background:transparent;
+    color:var(--ink); cursor:pointer; text-align:left; white-space:nowrap;
+  }
+  .theme-picker button:hover{ background:color-mix(in srgb, var(--accent) 10%, transparent); }
+  .theme-picker button.sel{ background:color-mix(in srgb, var(--accent) 15%, transparent); color:var(--accent); font-weight:700; }
 
   /* TOC */
   .toc-panel{
@@ -127,7 +147,7 @@
     main{ padding:20px 18px 100px }
   }
 
-  /* Book mode (pagination) */
+  /* Book mode */
   body.book-mode main{
     max-width:100%;
     padding:0;
@@ -143,24 +163,19 @@
   }
   body.book-mode #book-view::-webkit-scrollbar{ display:none }
   body.book-mode .book-page{
-    column-count:2;
-    column-gap:60px;
     height:100%;
-    width:max-content;
-    padding:30px 60px;
-    background:var(--paper);
     box-sizing:border-box;
+    width:max-content;
+    column-fill:auto;
+    background:var(--paper);
   }
-  body.book-mode .book-page .chapter,
-  body.book-mode .book-page .chapter-divider,
-  body.book-mode .book-page .book-cover-hero{
+  body.book-mode .chapter-title,
+  body.book-mode .chapter-num,
+  body.book-mode .chapter-tts-bar,
+  body.book-mode .chapter-section h3,
+  body.book-mode .chapter-divider,
+  body.book-mode .book-cover-hero{
     break-inside:avoid;
-  }
-  @media(max-width:640px){
-    body.book-mode .book-page{
-      column-count:1;
-      padding:20px 24px;
-    }
   }
 
   .book-page{
@@ -241,38 +256,24 @@
     padding: 2px 0;
   }
   .fragmento.activo {
-    background-color: color-mix(in srgb, var(--accent) 25%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+    background-color: color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
   }
-
-  .preguntas-list{
-    list-style:none; padding:0; margin:0;
+  .fragmento.ultimo {
+    background-color: #fde68a;
+    border-radius: 3px;
+    padding: 2px 0;
   }
-  .preguntas-list li{
-    font-family:var(--serif);
-    font-size:1.05rem; line-height:1.6;
-    padding:10px 14px;
-    margin:0 0 8px;
-    background:color-mix(in srgb, var(--accent) 5%, transparent);
-    border-left:3px solid var(--accent);
-    border-radius:0 6px 6px 0;
-    display:flex; align-items:flex-start; gap:10px;
-  }
-  .preguntas-list li::before{
-    content:'?'; flex-shrink:0;
-    width:22px; height:22px;
-    background:var(--accent); color:#fff;
-    border-radius:50%;
-    display:grid; place-items:center;
-    font-family:var(--sans); font-size:.72rem; font-weight:800;
-  }
+  [data-theme="dark"] .fragmento.ultimo { background-color: #78350f; }
+  [data-theme="sepia"] .fragmento.ultimo { background-color: #e9d5a1; }
+  [data-theme="parchment"] .fragmento.ultimo { background-color: #d9c9a8; }
 
   .chapter-divider{
     text-align:center; color:var(--muted);
     margin:40px 0; font-size:1.2rem; letter-spacing:1em;
   }
 
-  /* TTS per chapter */
+  /* Chapter controls */
   .chapter-tts-bar{
     display:flex; align-items:center; gap:6px;
     padding:8px 0;
@@ -284,6 +285,7 @@
     width:36px; height:36px; border-radius:8px;
     background:transparent; border:1px solid var(--border); color:var(--ink);
     cursor:pointer; display:grid; place-items:center; transition:.15s;
+    font: inherit;
   }
   .chapter-tts-bar button:hover{ background:color-mix(in srgb,var(--accent) 10%, transparent) }
   .chapter-tts-bar button.primary{
@@ -294,7 +296,7 @@
   .chapter-tts-bar button svg{ width:18px; height:18px }
   .chapter-tts-bar select{
     font:inherit; font-size:.75rem; font-weight:700;
-    padding:5px 22px 5px 8px; border-radius:6px;
+    padding:6px 22px 6px 8px; border-radius:6px;
     border:1px solid var(--border); background:var(--paper); color:var(--ink);
     cursor:pointer; appearance:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -302,19 +304,32 @@
   }
   .chapter-tts-bar .spacer{ flex:1 }
   .chapter-tts-bar .check-leido{
-    display:inline-flex; align-items:center; gap:5px;
-    font-size:.75rem; font-weight:700; color:var(--muted);
+    font: inherit;
+    font-size:.75rem; font-weight:700;
+    color:var(--muted);
     cursor:pointer; user-select:none;
-    padding:4px 10px; border-radius:20px; border:1px solid var(--border);
+    padding:6px 12px; border-radius:20px;
+    border:1px solid var(--border);
+    background:transparent;
     transition:.15s;
   }
-  .chapter-tts-bar .check-leido:hover{ border-color:var(--accent) }
+  .chapter-tts-bar .check-leido:hover{ border-color:var(--ok); color:var(--ok); }
   .chapter-tts-bar .check-leido.checked{
     background:var(--ok); color:#fff; border-color:var(--ok);
   }
-  .chapter-tts-bar .check-leido input{ display:none }
+  .chapter-tts-bar .resume-btn{
+    font: inherit;
+    font-size:.72rem; font-weight:700;
+    padding:6px 12px; border-radius:20px;
+    border:1px solid var(--accent);
+    background:color-mix(in srgb, var(--accent) 15%, transparent);
+    color:var(--accent);
+    cursor:pointer;
+    transition:.15s;
+  }
+  .chapter-tts-bar .resume-btn:hover{ background:color-mix(in srgb, var(--accent) 25%, transparent); }
 
-  /* Book mode page navigation */
+  /* Page navigation */
   .page-nav{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
     display:none; align-items:center; gap:12px;
@@ -337,7 +352,7 @@
     min-width:60px; text-align:center;
   }
 
-  /* Floating TTS bar (global) */
+  /* Floating TTS bar */
   .tts-bar{
     position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
     background:var(--paper); border:1px solid var(--border);
@@ -440,9 +455,9 @@
   }
 
   .chapter.subrayado{
-    background:color-mix(in srgb, var(--accent) 15%, transparent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent);
     border-radius:4px;
-    box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+    box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
     transition:background-color .3s, box-shadow .3s;
   }
 </style>
@@ -473,6 +488,13 @@
       <button class="icon-btn" id="btnLeido" title="Marcar como leído">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
       </button>
+
+      <div class="theme-picker" id="themePicker">
+        <button data-theme="light">☀️ Claro</button>
+        <button data-theme="dark">🌙 Oscuro</button>
+        <button data-theme="sepia">📜 Sepia</button>
+        <button data-theme="parchment">📖 Pergamino</button>
+      </div>
     </div>
   </div>
 </header>
@@ -495,7 +517,6 @@
   </div>
 </main>
 
-<!-- Navegación de páginas (solo en modo libro) -->
 <div class="page-nav" id="pageNav">
   <button id="btnPrevPage" title="Página anterior">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -506,7 +527,6 @@
   </button>
 </div>
 
-<!-- Barra TTS global (solo en modo scroll) -->
 <div class="tts-bar">
   <button id="btnPlayPause" class="primary" title="Reproducir / Pausar">
     <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -530,7 +550,6 @@
 
 <script>
 (() => {
-  console.log('✅ lector.html v12 cargado');
   'use strict';
 
   const $ = (s) => document.querySelector(s);
@@ -539,6 +558,7 @@
 
   const params = new URLSearchParams(location.search);
   const libroId = params.get('libro');
+  const autoplay = params.get('autoplay') === '1';
 
   let libro = null;
   let biblioteca = null;
@@ -554,8 +574,6 @@
   let capTTSActual = null;
 
   let bookMode = false;
-  let currentPage = 1;
-  let totalPages = 1;
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -626,7 +644,7 @@
       libro = JSON.parse(localLibro);
       libro.id = libroId;
     } else {
-      throw new Error('Libro no encontrado. Asegurate de tener sync configurado o que el libro esté guardado localmente.');
+      throw new Error('Libro no encontrado.');
     }
 
     const localBib = localStorage.getItem('biblioteca-cache-v11');
@@ -636,7 +654,8 @@
     }
   }
 
-  function dividirEnTrozos(texto, maxLen = 220) {
+  // Fragmentos más largos (~450 caracteres) para agrupar párrafos completos
+  function dividirEnTrozos(texto, maxLen = 450) {
     const limpio = String(texto||'').replace(/\s+/g, ' ').trim();
     if (!limpio) return [];
     const oraciones = [];
@@ -759,10 +778,11 @@
 
     page.innerHTML = html;
     actualizarProgreso();
-    if (bookMode) updatePageCount();
   }
 
   function renderCap(c, idx) {
+    const ttsIndice = c.ttsIndice || 0;
+    const leido = c.leido || false;
     let html = `<section class="chapter" id="cap-${c.id}" data-cap-id="${c.id}">
       <div class="chapter-num">Capítulo ${idx+1}</div>
       <h2 class="chapter-title">${esc(c.titulo)}</h2>
@@ -784,11 +804,11 @@
           <option value="1.75">1.75×</option>
           <option value="2">2×</option>
         </select>
+        ${ttsIndice > 0 ? `<button class="resume-btn" data-resume="${c.id}" title="Reanudar desde donde quedaste">⏵ Reanudar (frag. ${ttsIndice+1})</button>` : ''}
         <span class="spacer"></span>
-        <label class="check-leido ${c.leido ? 'checked' : ''}" data-check-leido="${c.id}">
-          <input type="checkbox" ${c.leido ? 'checked' : ''} />
-          ${c.leido ? '✓ Leído' : 'Marcar leído'}
-        </label>
+        <button class="check-leido ${leido ? 'checked' : ''}" data-check-leido="${c.id}">
+          ${leido ? '✓ Leído' : 'Marcar leído'}
+        </button>
       </div>`;
 
     c.fragmentosPlanos = [];
@@ -805,9 +825,10 @@
         htmlSec += `<p>`;
         for (const frag of frags) {
           const fragIndex = c._fragOffset;
+          const esUltimo = fragIndex === ttsIndice;
           c.fragmentosPlanos.push(frag);
           c._fragOffset++;
-          htmlSec += `<span class="fragmento" data-frag-index="${fragIndex}">${esc(frag)}</span> `;
+          htmlSec += `<span class="fragmento ${esUltimo ? 'ultimo' : ''}" data-frag-index="${fragIndex}">${esc(frag)}</span> `;
         }
         htmlSec += `</p>`;
       }
@@ -871,16 +892,6 @@
     setTimeout(elegirVoz, 800);
   }
 
-  function capTextoCompleto(cap) {
-    let parts = [];
-    if (cap.resumen) parts.push(cap.resumen);
-    if (cap.puntos) parts.push(cap.puntos);
-    if (cap.aplicacion) parts.push(cap.aplicacion);
-    if (cap.enseñanza) parts.push(cap.enseñanza);
-    if (cap.preguntas) parts.push(cap.preguntas.join('. '));
-    return parts.join('. ');
-  }
-
   function limpiarTTS() {
     document.querySelectorAll('.chapter.subrayado').forEach(el => el.classList.remove('subrayado'));
     document.querySelectorAll('.toc-item.current').forEach(el => el.classList.remove('current'));
@@ -939,7 +950,6 @@
     if (gen !== ttsGen) return;
     if (!ttsActivo) return;
     if (ttsIdx >= ttsFrags.length) {
-      // Fin del capítulo: intentar siguiente
       const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
       const idxActual = todosCaps.findIndex(c => c.id === capTTSActual);
       if (capTTSActual) {
@@ -947,12 +957,11 @@
         if (cap) cap.ttsIndice = ttsFrags.length;
         guardarProgreso();
       }
-      // Reproducir siguiente capítulo automáticamente
       if (idxActual >= 0 && idxActual < todosCaps.length - 1) {
         const siguiente = todosCaps[idxActual + 1];
         if (siguiente.fragmentosPlanos && siguiente.fragmentosPlanos.length > 0) {
           pararTTS();
-          setTimeout(() => hablarCap(siguiente.id), 300);
+          setTimeout(() => hablarCap(siguiente.id), 400);
           return;
         }
       }
@@ -1100,13 +1109,13 @@
     const cap = todosCaps.find(c => c.id === capId);
     if (!cap) return;
     cap.leido = !cap.leido;
-    const label = document.querySelector(`[data-check-leido="${capId}"]`);
-    if (label) {
-      label.classList.toggle('checked', cap.leido);
-      label.innerHTML = `<input type="checkbox" ${cap.leido ? 'checked' : ''} /> ${cap.leido ? '✓ Leído' : 'Marcar leído'}`;
+    const btn = document.querySelector(`[data-check-leido="${capId}"]`);
+    if (btn) {
+      btn.classList.toggle('checked', cap.leido);
+      btn.textContent = cap.leido ? '✓ Leído' : 'Marcar leído';
     }
     guardarProgreso();
-    toast(cap.leido ? 'Capítulo marcado como leído' : 'Capítulo marcado como no leído');
+    toast(cap.leido ? '✓ Capítulo marcado como leído' : 'Capítulo marcado como no leído');
   }
 
   function agregarNota(capId, txt) {
@@ -1151,36 +1160,57 @@
     guardarProgreso();
   }
 
+  /* ═══ MODO LIBRO ═══ */
+  function getBookLayout() {
+    const view = $('#book-view');
+    const w = view.clientWidth;
+    const isDesktop = w >= 900;
+    const cols = isDesktop ? 2 : 1;
+    const padding = 40;
+    const gap = 40;
+    const colWidth = Math.floor((w - 2*padding - (cols-1)*gap) / cols);
+    return { cols, padding, gap, colWidth, step: colWidth + gap };
+  }
+
+  function applyBookMode() {
+    const page = $('#book-page');
+    if (!page) return;
+    if (!bookMode) {
+      page.style.columnWidth = '';
+      page.style.columnGap = '';
+      page.style.padding = '';
+      page.style.width = '';
+      return;
+    }
+    const L = getBookLayout();
+    page.style.columnWidth = L.colWidth + 'px';
+    page.style.columnGap = L.gap + 'px';
+    page.style.padding = `20px ${L.padding}px`;
+    page.style.width = 'max-content';
+    setTimeout(updatePageInfo, 100);
+  }
+
   function toggleBookMode() {
     bookMode = !bookMode;
     document.body.classList.toggle('book-mode', bookMode);
-    if (bookMode) {
-      updatePageCount();
-      setTimeout(() => scrollToPage(currentPage), 100);
-    } else {
+    $('#btnMode').classList.toggle('active', bookMode);
+    applyBookMode();
+    if (!bookMode) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    toast(bookMode ? '📖 Modo libro' : '📜 Modo scroll');
   }
 
-  function updatePageCount() {
+  function updatePageInfo() {
     const view = $('#book-view');
-    if (!view) return;
-    const pageWidth = view.clientWidth;
-    const scrollWidth = view.scrollWidth;
-    totalPages = Math.max(1, Math.ceil(scrollWidth / pageWidth));
-    currentPage = Math.min(currentPage, totalPages);
-    $('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
-    $('#btnPrevPage').disabled = currentPage <= 1;
-    $('#btnNextPage').disabled = currentPage >= totalPages;
-  }
-
-  function scrollToPage(n) {
-    const view = $('#book-view');
-    if (!view) return;
-    const pageWidth = view.clientWidth;
-    view.scrollTo({ left: (n - 1) * pageWidth, behavior: 'smooth' });
-    currentPage = n;
-    updatePageCount();
+    if (!view || !bookMode) return;
+    const L = getBookLayout();
+    const maxScroll = view.scrollWidth - view.clientWidth;
+    const totalSteps = Math.max(1, Math.ceil(maxScroll / L.step) + 1);
+    const currentStep = Math.min(totalSteps, Math.round(view.scrollLeft / L.step) + 1);
+    $('#pageInfo').textContent = `${currentStep} / ${totalSteps}`;
+    $('#btnPrevPage').disabled = currentStep <= 1;
+    $('#btnNextPage').disabled = currentStep >= totalSteps;
   }
 
   document.body.addEventListener('click', (e) => {
@@ -1193,7 +1223,6 @@
         document.querySelectorAll('.toc-item.current').forEach(t => t.classList.remove('current'));
         tocItem.classList.add('current');
         $('#tocPanel').classList.remove('open');
-        hablarCap(capId);
       }
       return;
     }
@@ -1214,7 +1243,6 @@
       return;
     }
 
-    // TTS per chapter
     const playBtn = e.target.closest('[data-tts-play]');
     if (playBtn) { hablarCap(playBtn.dataset.ttsPlay); return; }
 
@@ -1235,9 +1263,17 @@
     const stopBtn = e.target.closest('[data-tts-stop]');
     if (stopBtn) { pararTTS(); return; }
 
+    const resumeBtn = e.target.closest('[data-resume]');
+    if (resumeBtn) { hablarCap(resumeBtn.dataset.resume); return; }
+
+    const checkLeido = e.target.closest('[data-check-leido]');
+    if (checkLeido) {
+      toggleLeidoCap(checkLeido.dataset.checkLeido);
+      return;
+    }
+
     const speedSelect = e.target.closest('[data-tts-speed]');
     if (speedSelect) {
-      const capId = speedSelect.dataset.ttsSpeed;
       ttsVelocidad = parseFloat(speedSelect.value);
       if (ttsActivo && !ttsPausado) {
         ttsGen++;
@@ -1245,12 +1281,6 @@
         try { window.speechSynthesis.cancel(); } catch {}
         setTimeout(() => { if (gen === ttsGen) reproducirTrozo(gen); }, 100);
       }
-      return;
-    }
-
-    const checkLeido = e.target.closest('[data-check-leido]');
-    if (checkLeido) {
-      toggleLeidoCap(checkLeido.dataset.checkLeido);
       return;
     }
   });
@@ -1267,29 +1297,55 @@
     input.value = '';
   });
 
-  // Theme selector
+  /* ═══ TEMAS ═══ */
   const THEMES = ['light', 'dark', 'sepia', 'parchment'];
-  let themeIdx = parseInt(localStorage.getItem('lector-theme-idx') || '0', 10);
-  function applyTheme() {
-    const t = THEMES[themeIdx % THEMES.length];
-    document.documentElement.dataset.theme = t;
-    localStorage.setItem('lector-theme-idx', String(themeIdx % THEMES.length));
-  }
-  applyTheme();
+  let currentTheme = localStorage.getItem('lector-theme') || 'light';
 
-  $('#btnTheme').addEventListener('click', () => {
-    themeIdx++;
-    applyTheme();
-    toast('Tema: ' + THEMES[themeIdx % THEMES.length]);
+  function applyTheme(t) {
+    currentTheme = t;
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('lector-theme', t);
+    document.querySelectorAll('#themePicker button').forEach(b => {
+      b.classList.toggle('sel', b.dataset.theme === t);
+    });
+  }
+  applyTheme(currentTheme);
+
+  $('#btnTheme').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('#themePicker').classList.toggle('open');
+  });
+  $('#themePicker').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-theme]');
+    if (!b) return;
+    applyTheme(b.dataset.theme);
+    $('#themePicker').classList.remove('open');
+    toast('Tema: ' + b.textContent.trim());
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#btnTheme') && !e.target.closest('#themePicker')) {
+      $('#themePicker').classList.remove('open');
+    }
   });
 
   $('#btnMode').addEventListener('click', toggleBookMode);
 
   $('#btnPrevPage').addEventListener('click', () => {
-    if (currentPage > 1) scrollToPage(currentPage - 1);
+    const view = $('#book-view');
+    const L = getBookLayout();
+    view.scrollBy({ left: -L.step, behavior: 'smooth' });
   });
   $('#btnNextPage').addEventListener('click', () => {
-    if (currentPage < totalPages) scrollToPage(currentPage + 1);
+    const view = $('#book-view');
+    const L = getBookLayout();
+    view.scrollBy({ left: L.step, behavior: 'smooth' });
+  });
+  $('#book-view').addEventListener('scroll', updatePageInfo);
+  window.addEventListener('resize', () => {
+    if (bookMode) {
+      applyBookMode();
+      setTimeout(updatePageInfo, 150);
+    }
   });
 
   $('#btnBack').addEventListener('click', async () => {
@@ -1320,10 +1376,6 @@
     }
   });
 
-  window.addEventListener('resize', () => {
-    if (bookMode) updatePageCount();
-  });
-
   window.addEventListener('pagehide', () => {
     if (ttsActivo) guardarProgreso();
   });
@@ -1334,6 +1386,14 @@
       renderHeader();
       renderTOC();
       renderContenido();
+      console.log('✅ lector.html v13 cargado');
+
+      if (autoplay) {
+        setTimeout(() => {
+          const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+          if (todosCaps.length) hablarCap(todosCaps[0].id);
+        }, 800);
+      }
     } catch (e) {
       $('#book-page').innerHTML = `<div class="error">
         <h2>Error</h2>

@@ -8,7 +8,7 @@
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=12" />
+<link rel="manifest" href="manifest.json?v=13" />
 
 <script>
   try{
@@ -18,7 +18,7 @@
   }catch(e){}
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=12').catch(()=>{});
+      navigator.serviceWorker.register('sw.js?v=13').catch(()=>{});
     });
   }
 </script>
@@ -184,7 +184,7 @@
   }
   .badge-read svg{width:10px;height:10px}
   .card-top{display:flex;gap:12px;align-items:flex-start}
-  .card-head{min-width:0;flex:1}
+  .card-head{min-width:0;flex:1;padding-bottom: 48px;}
   .card-head h3{margin:0;font-size:.98rem;line-height:1.3;letter-spacing:-.015em;font-weight:700;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .author{margin:2px 0 0;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -201,6 +201,28 @@
     font-style: italic;
     font-family: var(--serif);
   }
+
+  /* Botón Play flotante en la tarjeta */
+  .card-play {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 50%, transparent);
+    z-index: 3;
+    transition: transform .15s, filter .15s;
+  }
+  .card-play:hover { transform: scale(1.08); filter: brightness(1.1); }
+  .card-play:active { transform: scale(.96); }
+  .card-play svg { width: 18px; height: 18px; margin-left: 2px; }
 
   .meta-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
   .pill{
@@ -297,11 +319,13 @@
     .grid .card-top{flex-direction:column;gap:8px;align-items:stretch}
     .grid .cover{width:100%;height:170px;border-radius:6px 6px 4px 4px;font-size:2.4rem}
     .grid .cover::after{display:none}
+    .grid .card-head{padding-bottom: 44px;}
     .grid .card-head h3{font-size:.82rem;-webkit-line-clamp:2;line-height:1.25}
     .grid .author{font-size:.68rem}
     .grid .resena-card{font-size:.65rem;-webkit-line-clamp:2}
     .grid .meta-row{gap:3px;margin-top:4px}
     .grid .pill{font-size:.58rem;padding:2px 6px;min-width:42px;height:17px}
+    .grid .card-play{width:38px;height:38px;bottom:8px;right:8px;}
   }
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
@@ -537,6 +561,7 @@
   const SYNC_TOKEN_KEY = 'biblioteca-sync-token';
   const SYNC_GIST_KEY = 'biblioteca-sync-gist';
   const LS_CACHE_BIB = 'biblioteca-cache-v11';
+  const LS_ELIMINADOS = 'biblioteca-eliminados-v1';
 
   let biblioteca = { version: 2, libros: [], preferencias: {} };
   let libroActualReview = null;
@@ -581,6 +606,18 @@
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
   function tieneSync() { return getToken() && getGistId(); }
+
+  function getEliminados() {
+    try { return JSON.parse(localStorage.getItem(LS_ELIMINADOS) || '[]'); } catch { return []; }
+  }
+  function addEliminado(id) {
+    const arr = getEliminados();
+    if (!arr.includes(id)) { arr.push(id); localStorage.setItem(LS_ELIMINADOS, JSON.stringify(arr)); }
+  }
+  function removeEliminado(id) {
+    const arr = getEliminados().filter(x => x !== id);
+    localStorage.setItem(LS_ELIMINADOS, JSON.stringify(arr));
+  }
 
   async function fetchConTimeout(url, opts = {}, ms = 20000) {
     const ctrl = new AbortController();
@@ -630,6 +667,9 @@
             ? await (await fetchConTimeout(file.raw_url)).text()
             : file.content;
           biblioteca = JSON.parse(contenido);
+          // Filtrar libros eliminados localmente
+          const eliminados = getEliminados();
+          biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
           localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
           $('#sSync').textContent = '✓';
           return;
@@ -642,6 +682,8 @@
       const cache = localStorage.getItem(LS_CACHE_BIB);
       if (cache) {
         biblioteca = JSON.parse(cache);
+        const eliminados = getEliminados();
+        biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
         $('#sSync').textContent = '⚠';
         return;
       }
@@ -651,35 +693,31 @@
   }
 
   async function guardarBiblioteca(silencioso = false) {
-    if (!tieneSync()) { 
-        localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-        return true; 
-    }
+    localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+    if (!tieneSync()) return true;
     try {
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
         files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
       });
-      localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
       $('#sSync').textContent = '✓';
       if (!silencioso) toast('✓ Biblioteca sincronizada');
       return true;
     } catch (e) {
       $('#sSync').textContent = '⚠';
-      localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
       if (!silencioso) toast('Error de sync: ' + e.message + ' (guardado local)');
       return false;
     }
   }
 
   async function guardarLibroEnGist(libroId, contenidoLibro) {
-    if (!tieneSync()) throw new Error('Falta configurar sync');
+    if (!tieneSync()) return;
     await ghRequest('PATCH', `/gists/${getGistId()}`, {
       files: { [`libro-${libroId}.json`]: { content: JSON.stringify(contenidoLibro) } }
     });
   }
 
   async function eliminarLibroDeGist(libroId) {
-    if (!tieneSync()) throw new Error('Falta configurar sync');
+    if (!tieneSync()) return;
     await ghRequest('PATCH', `/gists/${getGistId()}`, {
       files: { [`libro-${libroId}.json`]: null }
     });
@@ -746,7 +784,6 @@
       const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
       const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
       const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
-      // Mejora: captura "Reseña:", "Reseña breve:", "Resumen:", etc.
       const mReseña = lineaTrim.match(/^(Rese[ñn]a|Resumen|Sinopsis|Descripci[oó]n)(?:\s+breve)?\s*:\s*(.*)$/i);
 
       if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
@@ -1039,6 +1076,9 @@
               </div>
             </div>
           </div>
+          <button class="card-play" data-play="${l.id}" title="Leer ahora" aria-label="Leer ahora">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
         </article>`;
     }).join('');
   }
@@ -1114,7 +1154,7 @@
         ✍️ Autor: ${esc(parsed.autor || '(sin autor)')}<br>
         🏷️ Categoría: ${esc(getCat(parsed.categoria).nombre)}<br>
         📚 Capítulos: ${totalCaps}<br>
-        ${parsed.reseña ? `📝 Reseña: ${esc(parsed.reseña.slice(0, 80))}…` : ''}
+        ${parsed.reseña ? `📝 Reseña: ${esc(parsed.reseña.slice(0, 80))}…` : '⚠️ Sin reseña detectada'}
       </div>`;
       $('#addPreview').innerHTML = html;
       $('#addPreview').style.display = 'block';
@@ -1225,36 +1265,46 @@
     render();
   }
 
-async function eliminarReview() {
+  // ═══════════════════════════════════════════════════════════════
+  // BORRADO ROBUSTO: borra local primero, Gist en background
+  // ═══════════════════════════════════════════════════════════════
+  async function eliminarReview() {
     if (!libroActualReview) return;
     const l = libroActualReview;
-    if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará también del Gist si está configurado.`)) return;
+    if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará de tu biblioteca.`)) return;
 
-    // 1. Intentar borrar del Gist primero (si hay sync)
-    if (tieneSync()) {
-      try {
-        await eliminarLibroDeGist(l.id);
-      } catch (e) {
-        if (!confirm('No se pudo borrar del Gist: ' + e.message + '\n\n¿Borrar solo localmente?')) return;
-      }
-    }
-
-    // 2. Borrar localmente siempre
+    // 1. Borrar local INMEDIATAMENTE
     localStorage.removeItem(`libro-${l.id}.json`);
     biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+    addEliminado(l.id);
 
-    // 3. Si hay sync, actualizar el Gist con la lista sin el libro
-    if (tieneSync()) {
-      try { await guardarBiblioteca(true); } catch {}
-    }
-
+    // 2. Cerrar modal y refrescar vista al instante
     $('#reviewModal').close();
     render();
     toast('Libro eliminado');
-}
+
+    // 3. Intentar borrar del Gist en background (sin bloquear)
+    if (tieneSync()) {
+      try {
+        await eliminarLibroDeGist(l.id);
+        await guardarBiblioteca(true);
+        toast('✓ Eliminado también del Gist');
+      } catch (e) {
+        console.warn('No se pudo borrar del Gist:', e.message);
+        toast('⚠ Eliminado local. Gist falló: ' + e.message);
+      }
+    }
+  }
 
   $('#grid').addEventListener('click', (e) => {
+    const playBtn = e.target.closest('.card-play');
+    if (playBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      window.location.href = `lector.html?libro=${encodeURIComponent(playBtn.dataset.play)}&autoplay=1`;
+      return;
+    }
     const card = e.target.closest('.card');
     if (!card) return;
     abrirReview(card.dataset.id);
@@ -1441,13 +1491,13 @@ async function eliminarReview() {
     document.querySelectorAll('#iconOpts [data-icons]').forEach(b => b.classList.toggle('btn-primary', b.dataset.icons === i));
   }
 
-(async function init() {
+  (async function init() {
     aplicarConfigVisual();
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v12 cargado');
-})();
+    console.log('✅ index.html v13 cargado');
+  })();
 })();
 </script>
 </body>

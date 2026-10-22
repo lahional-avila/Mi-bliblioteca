@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=20" />
+<link rel="manifest" href="manifest.json?v=21" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=20').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=21').catch(()=>{}); });
   }
 </script>
 <style>
@@ -320,13 +320,19 @@
       </button>
     </header>
     <div class="modal-body">
-      <p class="hint">Seleccioná la carpeta del libro. Se cargará automáticamente el <code>.txt</code> y el <code>Cover.jpg</code> que esté en esa misma carpeta (si existe).</p>
+      <div class="hint" style="padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);line-height:1.6">
+        <strong>📖 Carga automática:</strong> al hacer clic en <strong>"Seleccionar libro"</strong>, se abre el explorador.
+        Elegí la <strong>carpeta del libro</strong> (donde está el <code>.txt</code> y el <code>Cover.jpg</code>).
+        Se cargará todo automáticamente.
+        <br><br>
+        <span style="color:var(--muted);font-size:.75rem">⚠️ Por seguridad, los navegadores no permiten leer archivos hermanos de un archivo seleccionado. La carpeta es la única forma de hacerlo automático.</span>
+      </div>
 
       <div class="field">
         <label>Cargar libro</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-          <button type="button" class="btn btn-primary" id="btnSelectFolder">📁 Seleccionar carpeta (auto-portada)</button>
-          <button type="button" class="btn btn-ghost" id="btnSelectFile">📄 Solo el TXT</button>
+          <button type="button" class="btn btn-primary" id="btnSelectFolder" style="flex:1">📖 Seleccionar libro (auto-portada)</button>
+          <button type="button" class="btn btn-ghost" id="btnSelectFile" style="flex:1">📄 Solo el TXT (sin portada)</button>
         </div>
         <div id="fileInfo" style="font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
         <input type="file" id="addArchivo" accept=".txt,text/plain" multiple style="display:none" />
@@ -335,11 +341,11 @@
 
       <div class="field">
         <label for="addTexto">Texto completo del libro</label>
-        <textarea id="addTexto" placeholder="Pegá el texto aquí si no subís un archivo..." style="min-height:200px"></textarea>
+        <textarea id="addTexto" placeholder="Pegá el texto aquí si no subís un archivo..." style="min-height:150px"></textarea>
       </div>
 
       <div class="field">
-        <label>Portada</label>
+        <label>Portada (si no se cargó auto)</label>
         <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
           <button type="button" class="btn btn-ghost btn-sm" id="addBuscarPortada">🔍 Buscar en Google</button>
           <button type="button" class="btn btn-ghost btn-sm" id="btnPegarPortada">📋 Pegar del Portapapeles</button>
@@ -458,18 +464,13 @@
   }
 
   async function ghRequest(method, path, body) {
-    const token = getToken();
-    const gistId = getGistId();
+    const token = getToken(); const gistId = getGistId();
     if (!token || !gistId) throw new Error('Falta token o Gist ID');
     let res;
     try {
       res = await fetchConTimeout(`https://api.github.com${path}`, {
         method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
         body: body ? JSON.stringify(body) : undefined
       });
     } catch (e) {
@@ -496,7 +497,6 @@
     btn.classList.add('sync-loading');
 
     try {
-      console.log('🔄 Sincronizando con Gist…');
       const gist = await ghRequest('GET', `/gists/${getGistId()}`);
       const file = gist.files && gist.files['biblioteca.json'];
 
@@ -858,6 +858,247 @@
     }
   }
 
+  /* ═══ CARGA AUTOMÁTICA DE LIBRO + COVER ═══ */
+  async function loadBookFromFiles(txtFile, coverFile) {
+    try {
+      const texto = await leerArchivoTexto(txtFile);
+      $('#addTexto').value = texto;
+      analizarTexto();
+      if (coverFile) {
+        coverBlob = coverFile;
+        mostrarPreviewPortada(coverFile);
+      }
+      $('#fileInfo').textContent = `📄 ${txtFile.name}${coverFile ? ' + 🖼️ ' + coverFile.name : ' (sin Cover)'}`;
+      toast(coverFile ? '✓ Libro + portada cargados' : '✓ Libro cargado');
+    } catch (err) { toast('Error: ' + err.message); }
+  }
+
+  async function processDirectoryHandle(dirHandle) {
+    const txtFiles = [];
+    let coverFile = null;
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind !== 'file') continue;
+      const name = entry.name.toLowerCase();
+      if (name.endsWith('.txt')) txtFiles.push({ handle: entry, name: entry.name });
+      if (/^cover\.(jpg|jpeg|png|webp)$/i.test(name)) {
+        try { coverFile = await entry.getFile(); } catch (e) {}
+      }
+    }
+    if (!txtFiles.length) { toast('❌ No se encontró .txt en esa carpeta'); return; }
+    let selectedTxt = txtFiles[0];
+    if (txtFiles.length > 1) {
+      const opciones = txtFiles.map((e, i) => `${i+1}. ${e.name}`).join('\n');
+      const idx = parseInt(prompt(`Hay varios .txt:\n${opciones}\n\n¿Cuál usar? (1-${txtFiles.length})`, '1'), 10) - 1;
+      if (idx >= 0 && idx < txtFiles.length) selectedTxt = txtFiles[idx];
+    }
+    const txtFile = await selectedTxt.handle.getFile();
+    await loadBookFromFiles(txtFile, coverFile);
+  }
+
+  async function processFilesList(files) {
+    const txts = files.filter(f => /\.txt$/i.test(f.name));
+    const cover = files.find(f => /^cover\.(jpg|jpeg|png|webp)$/i.test(f.name));
+    if (!txts.length) { toast('❌ No se encontró .txt'); return; }
+    const txt = txts[0];
+    await loadBookFromFiles(txt, cover);
+  }
+
+  // ⭐ Botón principal: seleccionar CARPETA (permite auto-portada)
+  $('#btnSelectFolder').addEventListener('click', async () => {
+    if ('showDirectoryPicker' in window) {
+      try {
+        const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+        await processDirectoryHandle(dirHandle);
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.warn('showDirectoryPicker:', e);
+      }
+    }
+    // Fallback: input webkitdirectory
+    if ('webkitdirectory' in document.createElement('input')) {
+      $('#addDir').click();
+      return;
+    }
+    // Último fallback: file picker (sin auto-cover)
+    $('#addArchivo').click();
+  });
+
+  // ⭐ Botón secundario: solo .txt (sin auto-portada)
+  $('#btnSelectFile').addEventListener('click', () => $('#addArchivo').click());
+
+  // Handler para webkitdirectory (fallback)
+  $('#addDir').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    await processFilesList(files);
+    e.target.value = '';
+  });
+
+  // Handler para input file tradicional (solo .txt)
+  $('#addArchivo').addEventListener('change', async (e) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    for (const file of files) {
+      if (file.type.startsWith('text/') || /\.txt$/i.test(file.name)) {
+        try {
+          const texto = await leerArchivoTexto(file);
+          $('#addTexto').value = texto;
+          analizarTexto();
+          $('#fileInfo').textContent = `📄 ${file.name} (agregá la portada manualmente)`;
+          toast('✓ Texto cargado: ' + file.name);
+        } catch (err) { toast('Error: ' + err.message); }
+      }
+    }
+    e.target.value = '';
+  });
+
+  /* ═══ EVENTOS ═══ */
+  $('#grid').addEventListener('click', (e) => {
+    const playBtn = e.target.closest('.card-play');
+    if (playBtn) {
+      e.stopPropagation(); e.preventDefault();
+      window.location.href = `lector.html?libro=${encodeURIComponent(playBtn.dataset.play)}`;
+      return;
+    }
+    const card = e.target.closest('.card');
+    if (!card) return;
+    abrirReview(card.dataset.id);
+  });
+
+  $('#busqueda').addEventListener('input', () => { clearTimeout(busquedaTimer); busquedaTimer = setTimeout(render, 180); });
+  $('#orden').addEventListener('change', render);
+  $('#chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    filtroActivo = chip.dataset.filter;
+    render();
+  });
+
+  $('#btnTheme').addEventListener('click', () => {
+    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('tema', t);
+    actualizarIconoTema();
+  });
+  function actualizarIconoTema() {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    $('#iconSun').style.display = dark ? 'none' : '';
+    $('#iconMoon').style.display = dark ? '' : 'none';
+  }
+  actualizarIconoTema();
+
+  $('#btnSync').addEventListener('click', async () => {
+    if (!tieneSync()) {
+      $('#syncToken').value = getToken();
+      $('#syncGistId').value = getGistId();
+      $('#syncStatus').className = 'sync-status';
+      $('#syncStatus').textContent = '';
+      $('#syncModal').showModal();
+      return;
+    }
+    await sincronizarConGist(false);
+  });
+
+  $('#btnAdd').addEventListener('click', abrirAdd);
+  $('#revCerrar').addEventListener('click', () => {
+    if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
+    $('#reviewModal').close();
+  });
+  $('#revTtsBtn').addEventListener('click', hablarReseña);
+  $('#revEditar').addEventListener('click', editarReview);
+  $('#revEliminar').addEventListener('click', eliminarReview);
+  $('#revLeer').addEventListener('click', () => {
+    if (!libroActualReview) return;
+    if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
+    window.location.href = `lector.html?libro=${encodeURIComponent(libroActualReview.id)}`;
+  });
+
+  $('#addCerrar').addEventListener('click', () => $('#addModal').close());
+  $('#addCancelar').addEventListener('click', () => $('#addModal').close());
+  $('#addGuardar').addEventListener('click', guardarNuevoLibro);
+
+  $('#addTexto').addEventListener('input', () => {
+    clearTimeout(window._addTextoDebounce);
+    window._addTextoDebounce = setTimeout(analizarTexto, 500);
+  });
+
+  $('#addBuscarPortada').addEventListener('click', async () => {
+    if (!parsedPreview?.titulo) {
+      analizarTexto();
+      if (!parsedPreview?.titulo) { toast('Cargá el texto primero'); return; }
+    }
+    toast('Buscando portada…');
+    try {
+      const small = await buscarPortadaAuto(parsedPreview.titulo, parsedPreview.autor);
+      if (small) { coverBlob = small; mostrarPreviewPortada(small); toast('✓ Portada encontrada'); }
+      else { toast('No se encontró portada'); }
+    } catch (e) { toast('Error: ' + e.message); }
+  });
+
+  $('#btnPegarPortada').addEventListener('click', async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith('image/'));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          coverBlob = blob; mostrarPreviewPortada(blob); toast('✓ Imagen pegada');
+          return;
+        }
+      }
+      toast('No hay imágenes en el portapapeles');
+    } catch (e) { toast('Error: ' + e.message); }
+  });
+
+  $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
+  $('#syncGuardar').addEventListener('click', async () => {
+    localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
+    localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
+    toast('✓ Guardado');
+    $('#syncModal').close();
+    await sincronizarConGist(false);
+  });
+  $('#btnBorrarSync').addEventListener('click', () => {
+    if (!confirm('¿Borrar config de sync?')) return;
+    localStorage.removeItem(SYNC_TOKEN_KEY);
+    localStorage.removeItem(SYNC_GIST_KEY);
+    $('#syncToken').value = '';
+    $('#syncGistId').value = '';
+    toast('Config borrada');
+    $('#sSync').textContent = '—';
+  });
+  $('#btnProbarSync').addEventListener('click', async () => {
+    const st = $('#syncStatus');
+    st.className = 'sync-status info'; st.textContent = 'Probando…';
+    try {
+      localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
+      localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
+      const u = await ghRequest('GET', '/user');
+      st.className = 'sync-status ok';
+      st.textContent = `✅ OK. User: ${u.login}`;
+    } catch (e) {
+      st.className = 'sync-status err';
+      st.textContent = '❌ ' + e.message;
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && tieneSync()) sincronizarConGist(true).then(() => render());
+  });
+  window.addEventListener('focus', () => {
+    if (tieneSync()) sincronizarConGist(true).then(() => render());
+  });
+
+  (async function init() {
+    await cargarBiblioteca();
+    render();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    console.log('✅ index.html v21 cargado');
+  })();
+
+  /* ═══ HELPERS RESTANTES ═══ */
   function parsearTextoEstructurado(texto) {
     const lineas = texto.split('\n');
     const resultado = { titulo: '', autor: '', año: '', categoria: 'general', reseña: '', capitulos: [], secciones: [] };
@@ -1049,228 +1290,6 @@
       $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Pausar';
     } catch {}
   }
-
-  /* ═══ FILE PICKERS ═══ */
-  $('#btnSelectFile').addEventListener('click', () => $('#addArchivo').click());
-
-  $('#btnSelectFolder').addEventListener('click', async () => {
-    if ('showDirectoryPicker' in window) {
-      try {
-        const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
-        const txtFiles = [];
-        let coverFile = null;
-        for await (const entry of dirHandle.values()) {
-          if (entry.kind !== 'file') continue;
-          const name = entry.name.toLowerCase();
-          if (name.endsWith('.txt')) txtFiles.push(entry);
-          if (/^cover\.(jpg|jpeg|png|webp)$/.test(name)) {
-            coverFile = await entry.getFile();
-          }
-        }
-        if (!txtFiles.length) { toast('No se encontró .txt en la carpeta'); return; }
-        let selectedTxt = txtFiles[0];
-        if (txtFiles.length > 1) {
-          const opciones = txtFiles.map((e, i) => `${i+1}. ${e.name}`).join('\n');
-          const idx = parseInt(prompt(`Varios .txt encontrados:\n${opciones}\n\n¿Cuál usar?`, '1'), 10) - 1;
-          if (idx >= 0 && idx < txtFiles.length) selectedTxt = txtFiles[idx];
-        }
-        const txtFile = await selectedTxt.getFile();
-        const texto = await leerArchivoTexto(txtFile);
-        $('#addTexto').value = texto;
-        analizarTexto();
-        if (coverFile) {
-          coverBlob = coverFile;
-          mostrarPreviewPortada(coverFile);
-        }
-        $('#fileInfo').textContent = `📄 ${txtFile.name}${coverFile ? ' + 🖼️ ' + coverFile.name : ' (sin Cover en carpeta)'}`;
-        toast(coverFile ? '✓ Libro y portada cargados' : '✓ Libro cargado (sin Cover.jpg)');
-      } catch (e) {
-        if (e.name !== 'AbortError') toast('Error: ' + e.message);
-      }
-    } else {
-      $('#addDir').click();
-    }
-  });
-
-  $('#addDir').addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    const txts = files.filter(f => /\.txt$/i.test(f.name));
-    const cover = files.find(f => /^cover\.(jpg|jpeg|png|webp)$/i.test(f.name));
-    if (!txts.length) { toast('No se encontró .txt en la carpeta'); return; }
-    const txt = txts[0];
-    try {
-      const texto = await leerArchivoTexto(txt);
-      $('#addTexto').value = texto;
-      analizarTexto();
-      if (cover) { coverBlob = cover; mostrarPreviewPortada(cover); }
-      $('#fileInfo').textContent = `📄 ${txt.name}${cover ? ' + 🖼️ ' + cover.name : ''}`;
-      toast(cover ? '✓ Libro y portada cargados' : '✓ Libro cargado');
-    } catch (err) { toast('Error: ' + err.message); }
-    e.target.value = '';
-  });
-
-  $('#addArchivo').addEventListener('change', async (e) => {
-    const files = e.target.files;
-    if (!files || !files.length) return;
-    for (const file of files) {
-      if (file.type.startsWith('text/') || /\.txt$/i.test(file.name)) {
-        try {
-          const texto = await leerArchivoTexto(file);
-          $('#addTexto').value = texto;
-          analizarTexto();
-          $('#fileInfo').textContent = `📄 ${file.name}`;
-          toast('✓ Texto cargado: ' + file.name);
-        } catch (err) { toast('Error: ' + err.message); }
-      }
-    }
-    e.target.value = '';
-  });
-
-  /* ═══ EVENTOS ═══ */
-  $('#grid').addEventListener('click', (e) => {
-    const playBtn = e.target.closest('.card-play');
-    if (playBtn) {
-      e.stopPropagation(); e.preventDefault();
-      window.location.href = `lector.html?libro=${encodeURIComponent(playBtn.dataset.play)}`;
-      return;
-    }
-    const card = e.target.closest('.card');
-    if (!card) return;
-    abrirReview(card.dataset.id);
-  });
-
-  $('#busqueda').addEventListener('input', () => { clearTimeout(busquedaTimer); busquedaTimer = setTimeout(render, 180); });
-  $('#orden').addEventListener('change', render);
-  $('#chips').addEventListener('click', (e) => {
-    const chip = e.target.closest('.chip');
-    if (!chip) return;
-    document.querySelectorAll('#chips .chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    filtroActivo = chip.dataset.filter;
-    render();
-  });
-
-  $('#btnTheme').addEventListener('click', () => {
-    const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = t;
-    localStorage.setItem('tema', t);
-    actualizarIconoTema();
-  });
-  function actualizarIconoTema() {
-    const dark = document.documentElement.dataset.theme === 'dark';
-    $('#iconSun').style.display = dark ? 'none' : '';
-    $('#iconMoon').style.display = dark ? '' : 'none';
-  }
-  actualizarIconoTema();
-
-  $('#btnSync').addEventListener('click', async () => {
-    if (!tieneSync()) {
-      $('#syncToken').value = getToken();
-      $('#syncGistId').value = getGistId();
-      $('#syncStatus').className = 'sync-status';
-      $('#syncStatus').textContent = '';
-      $('#syncModal').showModal();
-      return;
-    }
-    await sincronizarConGist(false);
-  });
-
-  $('#btnAdd').addEventListener('click', abrirAdd);
-  $('#revCerrar').addEventListener('click', () => {
-    if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
-    $('#reviewModal').close();
-  });
-  $('#revTtsBtn').addEventListener('click', hablarReseña);
-  $('#revEditar').addEventListener('click', editarReview);
-  $('#revEliminar').addEventListener('click', eliminarReview);
-  $('#revLeer').addEventListener('click', () => {
-    if (!libroActualReview) return;
-    if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
-    window.location.href = `lector.html?libro=${encodeURIComponent(libroActualReview.id)}`;
-  });
-
-  $('#addCerrar').addEventListener('click', () => $('#addModal').close());
-  $('#addCancelar').addEventListener('click', () => $('#addModal').close());
-  $('#addGuardar').addEventListener('click', guardarNuevoLibro);
-
-  $('#addTexto').addEventListener('input', () => {
-    clearTimeout(window._addTextoDebounce);
-    window._addTextoDebounce = setTimeout(analizarTexto, 500);
-  });
-
-  $('#addBuscarPortada').addEventListener('click', async () => {
-    if (!parsedPreview?.titulo) {
-      analizarTexto();
-      if (!parsedPreview?.titulo) { toast('Cargá el texto primero'); return; }
-    }
-    toast('Buscando portada…');
-    try {
-      const small = await buscarPortadaAuto(parsedPreview.titulo, parsedPreview.autor);
-      if (small) { coverBlob = small; mostrarPreviewPortada(small); toast('✓ Portada encontrada'); }
-      else { toast('No se encontró portada'); }
-    } catch (e) { toast('Error: ' + e.message); }
-  });
-
-  $('#btnPegarPortada').addEventListener('click', async () => {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'));
-        if (imageType) {
-          const blob = await item.getType(imageType);
-          coverBlob = blob; mostrarPreviewPortada(blob); toast('✓ Imagen pegada');
-          return;
-        }
-      }
-      toast('No hay imágenes en el portapapeles');
-    } catch (e) { toast('Error: ' + e.message); }
-  });
-
-  $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
-  $('#syncGuardar').addEventListener('click', async () => {
-    localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
-    localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
-    toast('✓ Guardado');
-    $('#syncModal').close();
-    await sincronizarConGist(false);
-  });
-  $('#btnBorrarSync').addEventListener('click', () => {
-    if (!confirm('¿Borrar config de sync?')) return;
-    localStorage.removeItem(SYNC_TOKEN_KEY);
-    localStorage.removeItem(SYNC_GIST_KEY);
-    $('#syncToken').value = '';
-    $('#syncGistId').value = '';
-    toast('Config borrada');
-    $('#sSync').textContent = '—';
-  });
-  $('#btnProbarSync').addEventListener('click', async () => {
-    const st = $('#syncStatus');
-    st.className = 'sync-status info'; st.textContent = 'Probando…';
-    try {
-      localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
-      localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
-      const u = await ghRequest('GET', '/user');
-      st.className = 'sync-status ok';
-      st.textContent = `✅ OK. User: ${u.login}`;
-    } catch (e) {
-      st.className = 'sync-status err';
-      st.textContent = '❌ ' + e.message;
-    }
-  });
-
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && tieneSync()) sincronizarConGist(true).then(() => render());
-  });
-  window.addEventListener('focus', () => {
-    if (tieneSync()) sincronizarConGist(true).then(() => render());
-  });
-
-  (async function init() {
-    await cargarBiblioteca();
-    render();
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v20 cargado');
-  })();
 })();
 </script>
 </body>

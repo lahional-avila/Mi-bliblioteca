@@ -8,7 +8,7 @@
 
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=11" />
+<link rel="manifest" href="manifest.json?v=12" />
 
 <script>
   try{
@@ -18,7 +18,7 @@
   }catch(e){}
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=11').catch(()=>{});
+      navigator.serviceWorker.register('sw.js?v=12').catch(()=>{});
     });
   }
 </script>
@@ -1225,24 +1225,34 @@
     render();
   }
 
-  async function eliminarReview() {
+async function eliminarReview() {
     if (!libroActualReview) return;
     const l = libroActualReview;
-    if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará también del Gist.`)) return;
-    try {
-      if (tieneSync()) {
+    if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará también del Gist si está configurado.`)) return;
+
+    // 1. Intentar borrar del Gist primero (si hay sync)
+    if (tieneSync()) {
+      try {
         await eliminarLibroDeGist(l.id);
+      } catch (e) {
+        if (!confirm('No se pudo borrar del Gist: ' + e.message + '\n\n¿Borrar solo localmente?')) return;
       }
-      localStorage.removeItem(`libro-${l.id}.json`);
-      biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
-      await guardarBiblioteca(true);
-      toast('Libro eliminado');
-      $('#reviewModal').close();
-      render();
-    } catch (e) {
-      toast('Error: ' + e.message);
     }
-  }
+
+    // 2. Borrar localmente siempre
+    localStorage.removeItem(`libro-${l.id}.json`);
+    biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
+    localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+
+    // 3. Si hay sync, actualizar el Gist con la lista sin el libro
+    if (tieneSync()) {
+      try { await guardarBiblioteca(true); } catch {}
+    }
+
+    $('#reviewModal').close();
+    render();
+    toast('Libro eliminado');
+}
 
   $('#grid').addEventListener('click', (e) => {
     const card = e.target.closest('.card');
@@ -1431,18 +1441,13 @@
     document.querySelectorAll('#iconOpts [data-icons]').forEach(b => b.classList.toggle('btn-primary', b.dataset.icons === i));
   }
 
-  (async function init() {
+(async function init() {
     aplicarConfigVisual();
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    if (tieneSync()) {
-      setTimeout(async () => {
-        await cargarBiblioteca();
-        render();
-      }, 8000);
-    }
-  })();
+    console.log('✅ index.html v12 cargado');
+})();
 })();
 </script>
 </body>

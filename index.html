@@ -189,6 +189,20 @@
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .author{margin:2px 0 0;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+  /* NUEVO: Reseña en la tarjeta */
+  .resena-card {
+    margin: 4px 0 0;
+    font-size: .75rem;
+    color: var(--muted);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-style: italic;
+    font-family: var(--serif);
+  }
+
   .meta-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
   .pill{
     font-size:.66rem;font-weight:700;padding:3px 9px;border-radius:20px;
@@ -286,6 +300,7 @@
     .grid .cover::after{display:none}
     .grid .card-head h3{font-size:.82rem;-webkit-line-clamp:2;line-height:1.25}
     .grid .author{font-size:.68rem}
+    .grid .resena-card{font-size:.65rem;-webkit-line-clamp:2}
     .grid .meta-row{gap:3px;margin-top:4px}
     .grid .pill{font-size:.58rem;padding:2px 6px;min-width:42px;height:17px}
   }
@@ -410,13 +425,19 @@
       </button>
     </header>
     <div class="modal-body">
-      <p class="hint">Pegá el texto del libro con el formato estructurado.<br>
+      <p class="hint">Pegá el texto del libro con el formato estructurado o subí un archivo.<br>
       <strong>Campos:</strong> <code>Título:</code>, <code>Autor:</code>, <code>Año:</code>, <code>Categoría:</code>, <code>Reseña:</code><br>
-      <strong>Capítulos:</strong> <code># Capítulo 1: [nombre]</code><br>
-      <strong>Subsecciones:</strong> <code>## Resumen</code>, <code>## Puntos importantes</code>, <code>## Aplicación</code>, <code>## Enseñanza</code>, <code>## Preguntas</code></p>
+      <strong>Capítulos:</strong> <code>## Capítulo 1: [nombre]</code><br>
+      <strong>Subsecciones:</strong> <code>### Resumen</code>, <code>### Puntos importantes</code>, <code>### Aplicación</code>, <code>### Enseñanza</code>, <code>### Preguntas</code></p>
+      
+      <div class="field">
+        <label for="addArchivo">Subir archivo de texto (.txt, .md)</label>
+        <input type="file" id="addArchivo" accept=".txt,.md,text/plain" />
+      </div>
+
       <div class="field">
         <label for="addTexto">Texto completo del libro</label>
-        <textarea id="addTexto" placeholder="Título: Mi libro&#10;Autor: Mi autor&#10;Año: 2024&#10;Categoría: psicologia&#10;Reseña: Una breve descripción del libro...&#10;&#10;# Capítulo 1: Introducción&#10;## Resumen&#10;Aquí va el resumen...&#10;## Puntos importantes&#10;...&#10;## Preguntas&#10;1. ¿Pregunta 1?&#10;2. ¿Pregunta 2?" style="min-height:280px"></textarea>
+        <textarea id="addTexto" placeholder="Título: Mi libro&#10;Autor: Mi autor&#10;Año: 2024&#10;Categoría: psicologia&#10;Reseña: Una breve descripción del libro...&#10;&#10;## Capítulo 1: Introducción&#10;### Resumen&#10;Aquí va el resumen...&#10;### Puntos importantes&#10;...&#10;### Preguntas&#10;1. ¿Pregunta 1?&#10;2. ¿Pregunta 2?" style="min-height:280px"></textarea>
       </div>
       <div class="field">
         <label for="addPortada">URL de portada (opcional)</label>
@@ -658,7 +679,7 @@
     });
   }
 
-  /* ═══ PARSEAR TEXTO ESTRUCTURADO ═══ */
+  /* ═══ PARSEAR TEXTO ESTRUCTURADO (MEJORADO) ═══ */
   function parsearTextoEstructurado(texto) {
     const lineas = texto.split('\n');
     const resultado = {
@@ -698,15 +719,32 @@
     }
 
     for (let i = 0; i < lineas.length; i++) {
-      const linea = lineas[i];
-      const lineaTrim = linea.trim();
+      let linea = lineas[i];
+      let lineaTrim = linea.trim();
+
+      // Detectar título en negrita sin campo (ej: **¡No más un Tipo Lindo!**)
+      if (!resultado.titulo && /^\*\*[^*]+\*\*$/.test(lineaTrim)) {
+        const m = lineaTrim.match(/^\*\*([^*]+)\*\*$/);
+        if (m) {
+          resultado.titulo = m[1].trim();
+          continue;
+        }
+      }
+
+      // Normalizar campos en negrita: **Campo:** valor  ->  Campo: valor
+      const mBoldField = lineaTrim.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)$/);
+      if (mBoldField) {
+        const campo = mBoldField[1].trim();
+        const valor = mBoldField[2].trim();
+        lineaTrim = `${campo}: ${valor}`;
+      }
 
       // Campos de cabecera
       const mTitulo = lineaTrim.match(/^T[íi]tulo:\s*(.+)$/i);
       const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
       const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
       const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
-      const mReseña = lineaTrim.match(/^Rese[ñn]a:\s*(.*)$/i);
+      const mReseña = lineaTrim.match(/^Rese[ñn]a(?:\s+breve)?:\s*(.*)$/i);
 
       if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
       if (mAutor) { resultado.autor = mAutor[1].trim(); continue; }
@@ -725,11 +763,30 @@
         continue;
       }
 
-      // Capítulos y secciones (# ...)
-      if (lineaTrim.startsWith('# ')) {
+      // Capítulos y secciones
+      // Primero subsections (###)
+      if (lineaTrim.startsWith('### ')) {
+        flushBuffer();
+        const sub = normalizar(lineaTrim.slice(4).trim());
+        if (/^resumen/.test(sub)) subActual = 'resumen';
+        else if (/^puntos?\s*importantes/.test(sub)) subActual = 'puntos';
+        else if (/^aplicaci[oó]n/.test(sub)) subActual = 'aplicacion';
+        else if (/^ensen|^ense[ñn]anza/.test(sub)) subActual = 'enseñanza';
+        else if (/^preguntas/.test(sub)) subActual = 'preguntas';
+        else subActual = 'resumen';
+        continue;
+      }
+
+      // Chapters (## or #)
+      if (lineaTrim.startsWith('## ') || lineaTrim.startsWith('# ')) {
         flushBuffer();
         flushReseña();
-        const titulo = lineaTrim.slice(2).trim();
+        let titulo;
+        if (lineaTrim.startsWith('## ')) {
+          titulo = lineaTrim.slice(3).trim();
+        } else {
+          titulo = lineaTrim.slice(2).trim();
+        }
         const esParte = /^(parte|secci[oó]n|libro)\s+/i.test(titulo);
         if (esParte) {
           const sec = { id: uid(), titulo, capitulos: [] };
@@ -746,19 +803,6 @@
           actual = { tipo: 'cap', obj: cap };
           subActual = null;
         }
-        continue;
-      }
-
-      // Subsecciones (## ...)
-      if (lineaTrim.startsWith('## ')) {
-        flushBuffer();
-        const sub = normalizar(lineaTrim.slice(3).trim());
-        if (/^resumen/.test(sub)) subActual = 'resumen';
-        else if (/^puntos?\s*importantes/.test(sub)) subActual = 'puntos';
-        else if (/^aplicaci[oó]n/.test(sub)) subActual = 'aplicacion';
-        else if (/^ensen|^ense[ñn]anza/.test(sub)) subActual = 'enseñanza';
-        else if (/^preguntas/.test(sub)) subActual = 'preguntas';
-        else subActual = 'resumen';
         continue;
       }
 
@@ -992,6 +1036,7 @@
             <div class="card-head">
               <h3>${esc(l.titulo)}</h3>
               ${l.autor ? `<p class="author">${esc(l.autor)}</p>` : ''}
+              ${l.reseña ? `<p class="resena-card">${esc(l.reseña.slice(0, 120))}${l.reseña.length > 120 ? '…' : ''}</p>` : ''}
               <div class="meta-row">
                 <span class="pill" style="background:color-mix(in srgb, ${cat.c1} 15%, transparent);color:${cat.c1};border-color:color-mix(in srgb, ${cat.c1} 40%, transparent)">${cat.nombre}</span>
                 <span class="pill pct ${pctClass}">${pct}%</span>
@@ -1244,6 +1289,17 @@
   $('#addCancelar').addEventListener('click', () => $('#addModal').close());
   $('#addAnalizar').addEventListener('click', analizarTexto);
   $('#addGuardar').addEventListener('click', guardarNuevoLibro);
+  
+  // Subir archivo
+  $('#addArchivo').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const texto = await file.text();
+    $('#addTexto').value = texto;
+    toast('Archivo cargado');
+    analizarTexto(); // Auto-analizar
+  });
+
   $('#addBuscarPortada').addEventListener('click', async () => {
     if (!parsedPreview || !parsedPreview.titulo) { toast('Analizá el texto primero'); return; }
     toast('Buscando portada…');

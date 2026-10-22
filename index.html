@@ -189,7 +189,6 @@
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .author{margin:2px 0 0;font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* Reseña en la tarjeta */
   .resena-card {
     margin: 4px 0 0;
     font-size: .75rem;
@@ -500,6 +499,8 @@
         <div style="display:flex;gap:6px;flex-wrap:wrap" id="themeOpts">
           <button type="button" class="btn btn-ghost btn-sm" data-theme="light">☀️ Claro</button>
           <button type="button" class="btn btn-ghost btn-sm" data-theme="dark">🌙 Oscuro</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-theme="sepia">📜 Sepia</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-theme="parchment">📖 Pergamino</button>
         </div>
       </div>
       <div class="field">
@@ -577,7 +578,6 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2300);
   }
 
-  /* ═══ CONFIG SYNC ═══ */
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
   function tieneSync() { return getToken() && getGistId(); }
@@ -620,7 +620,6 @@
     return res.json();
   }
 
-  /* ═══ CARGAR BIBLIOTECA ═══ */
   async function cargarBiblioteca() {
     if (tieneSync()) {
       try {
@@ -653,7 +652,6 @@
 
   async function guardarBiblioteca(silencioso = false) {
     if (!tieneSync()) { 
-        // Guardar localmente aunque no haya sync
         localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
         return true; 
     }
@@ -687,7 +685,6 @@
     });
   }
 
-  /* ═══ PARSEAR TEXTO ═══ */
   function parsearTextoEstructurado(texto) {
     const lineas = texto.split('\n');
     const resultado = {
@@ -749,7 +746,8 @@
       const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
       const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
       const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
-      const mReseña = lineaTrim.match(/^Rese[ñn]a(?:\s+breve)?:\s*(.*)$/i);
+      // Mejora: captura "Reseña:", "Reseña breve:", "Resumen:", etc.
+      const mReseña = lineaTrim.match(/^(Rese[ñn]a|Resumen|Sinopsis|Descripci[oó]n)(?:\s+breve)?\s*:\s*(.*)$/i);
 
       if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
       if (mAutor) { resultado.autor = mAutor[1].trim(); continue; }
@@ -764,7 +762,7 @@
         flushBuffer();
         flushReseña();
         enReseña = true;
-        if (mReseña[1].trim()) reseñaBuffer.push(mReseña[1].trim());
+        if (mReseña[2].trim()) reseñaBuffer.push(mReseña[2].trim());
         continue;
       }
 
@@ -796,7 +794,7 @@
           actual = { tipo: 'sec', obj: sec, currentCap: null };
           subActual = null;
         } else {
-          const cap = { id: uid(), titulo, resumen: '', puntos: '', aplicacion: '', enseñanza: '', preguntas: [], notas: [], ttsIndice: 0 };
+          const cap = { id: uid(), titulo, resumen: '', puntos: '', aplicacion: '', enseñanza: '', preguntas: [], notas: [], ttsIndice: 0, leido: false };
           if (actual && actual.tipo === 'sec') {
             actual.obj.capitulos.push(cap);
           } else {
@@ -820,7 +818,6 @@
     return resultado;
   }
 
-  /* ═══ PORTADA AUTO ═══ */
   async function buscarPortadaAuto(titulo, autor) {
     if (!titulo) return null;
     function timeout(p, ms) { return Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]); }
@@ -903,7 +900,6 @@
     });
   }
 
-  /* ═══ TTS ═══ */
   function elegirMejorVoz() {
     if (!('speechSynthesis' in window)) return null;
     const voces = window.speechSynthesis.getVoices() || [];
@@ -960,7 +956,6 @@
     } catch {}
   }
 
-  /* ═══ RENDER ═══ */
   function libroEnProgreso(l) { return l.progreso > 0 && !l.leido; }
 
   function listaFiltrada() {
@@ -1048,7 +1043,6 @@
     }).join('');
   }
 
-  /* ═══ REVIEW MODAL ═══ */
   function abrirReview(id) {
     const l = biblioteca.libros.find(x => x.id === id);
     if (!l) return;
@@ -1083,7 +1077,6 @@
     $('#reviewModal').showModal();
   }
 
-  /* ═══ ADD MODAL ═══ */
   function abrirAdd() {
     $('#addTitulo').textContent = 'Añadir libro';
     $('#addTexto').value = '';
@@ -1187,12 +1180,10 @@
         progreso: 0
       };
 
-      // Guardar siempre en localStorage primero
       localStorage.setItem(`libro-${nuevoId}.json`, JSON.stringify(contenidoLibro));
       biblioteca.libros.push(entrada);
       localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
 
-      // Intentar sincronizar si está configurado
       if (tieneSync()) {
         try {
           await guardarLibroEnGist(nuevoId, contenidoLibro);
@@ -1215,7 +1206,6 @@
     }
   }
 
-  /* ═══ EDITOR ═══ */
   async function editarReview() {
     if (!libroActualReview) return;
     const l = libroActualReview;
@@ -1254,7 +1244,6 @@
     }
   }
 
-  /* ═══ EVENTOS ═══ */
   $('#grid').addEventListener('click', (e) => {
     const card = e.target.closest('.card');
     if (!card) return;
@@ -1306,7 +1295,6 @@
   $('#addCancelar').addEventListener('click', () => $('#addModal').close());
   $('#addGuardar').addEventListener('click', guardarNuevoLibro);
   
-  // Manejo de Archivos Múltiples
   $('#addArchivo').addEventListener('change', async (e) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -1334,13 +1322,11 @@
     e.target.value = '';
   });
 
-  // Analizar en tiempo real al pegar texto
   $('#addTexto').addEventListener('input', () => {
     clearTimeout(window._addTextoDebounce);
     window._addTextoDebounce = setTimeout(analizarTexto, 500);
   });
 
-  // Botón Buscar Portada
   $('#addBuscarPortada').addEventListener('click', async () => {
     if (!parsedPreview || !parsedPreview.titulo) { 
       analizarTexto();
@@ -1362,7 +1348,6 @@
     } catch (e) { toast('Error: ' + e.message); }
   });
 
-  // Botón Pegar del Portapapeles
   $('#btnPegarPortada').addEventListener('click', async () => {
     try {
       const items = await navigator.clipboard.read();
@@ -1382,7 +1367,6 @@
     }
   });
 
-  // Modales de Sync y Settings
   $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
   $('#syncGuardar').addEventListener('click', async () => {
     localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
@@ -1447,7 +1431,6 @@
     document.querySelectorAll('#iconOpts [data-icons]').forEach(b => b.classList.toggle('btn-primary', b.dataset.icons === i));
   }
 
-  /* ═══ INIT ═══ */
   (async function init() {
     aplicarConfigVisual();
     await cargarBiblioteca();

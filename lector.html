@@ -19,6 +19,15 @@
     --bg:#1a1a1a; --paper:#232323; --ink:#e8e8e8; --muted:#999;
     --border:#333; --accent:#d4a373; --accent-2:#a67c52;
   }
+  [data-theme="sepia"]{
+    --bg:#f4ecd8; --paper:#fdf6e3; --ink:#3b2e2a; --muted:#8a7b70;
+    --border:#d6c8b3; --accent:#b06a3a; --accent-2:#d4a373;
+  }
+  [data-theme="parchment"]{
+    --bg:#e8dcc8; --paper:#f5e6d3; --ink:#3e2c1c; --muted:#8a735b;
+    --border:#c9b89a; --accent:#8b5e3c; --accent-2:#c19a6b;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
+  }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
@@ -27,6 +36,7 @@
     -webkit-font-smoothing:antialiased;
   }
 
+  /* Header */
   .topbar{
     position:sticky; top:0; z-index:50;
     background:color-mix(in srgb, var(--paper) 92%, transparent);
@@ -37,6 +47,7 @@
   .topbar-inner{
     max-width:1000px; margin:0 auto; padding:10px 16px;
     display:flex; align-items:center; justify-content:space-between; gap:12px;
+    flex-wrap:wrap;
   }
   .brand{display:flex; align-items:center; gap:12px; min-width:0; flex:1}
   .brand h1{
@@ -49,7 +60,7 @@
     overflow-wrap:anywhere;
     display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
   }
-  .actions{display:flex; align-items:center; gap:6px; flex-shrink:0}
+  .actions{display:flex; align-items:center; gap:6px; flex-shrink:0; flex-wrap:wrap}
   .icon-btn{
     width:38px; height:38px; border-radius:10px;
     background:transparent; border:1px solid var(--border); color:var(--muted);
@@ -58,6 +69,7 @@
   }
   .icon-btn:hover{ color:var(--ink); border-color:var(--accent) }
   .icon-btn svg{ width:20px; height:20px }
+  .icon-btn.active{ background:var(--accent); color:#fff; border-color:var(--accent) }
 
   .progress-bar{
     height:3px; background:var(--border);
@@ -68,6 +80,7 @@
     width:0%; transition:width .2s;
   }
 
+  /* TOC */
   .toc-panel{
     background:var(--paper); border-bottom:1px solid var(--border);
     max-height:0; overflow:hidden; transition:max-height .3s;
@@ -105,11 +118,49 @@
     line-height:1.3;
   }
 
+  /* Main */
   main{
-    max-width:720px; margin:0 auto; padding:32px 24px 120px;
+    max-width:900px; margin:0 auto; padding:32px 24px 120px;
+    position:relative;
   }
   @media(max-width:640px){
     main{ padding:20px 18px 100px }
+  }
+
+  /* Book mode (pagination) */
+  body.book-mode main{
+    max-width:100%;
+    padding:0;
+    height:calc(100vh - 64px);
+    overflow:hidden;
+  }
+  body.book-mode #book-view{
+    height:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-behavior:smooth;
+    scrollbar-width:none;
+  }
+  body.book-mode #book-view::-webkit-scrollbar{ display:none }
+  body.book-mode .book-page{
+    column-count:2;
+    column-gap:60px;
+    height:100%;
+    width:max-content;
+    padding:30px 60px;
+    background:var(--paper);
+    box-sizing:border-box;
+  }
+  body.book-mode .book-page .chapter,
+  body.book-mode .book-page .chapter-divider,
+  body.book-mode .book-page .book-cover-hero{
+    break-inside:avoid;
+  }
+  @media(max-width:640px){
+    body.book-mode .book-page{
+      column-count:1;
+      padding:20px 24px;
+    }
   }
 
   .book-page{
@@ -118,6 +169,7 @@
     padding:40px 48px;
     box-shadow:0 1px 3px rgba(0,0,0,.04), 0 20px 40px -24px rgba(0,0,0,.15);
     border:1px solid var(--border);
+    transition:background .2s, border .2s;
   }
   @media(max-width:640px){
     .book-page{ padding:24px 20px; border-radius:0; border:none; box-shadow:none; margin:0 -18px }
@@ -145,6 +197,7 @@
   .chapter{
     margin-bottom:60px;
     scroll-margin-top:80px;
+    position:relative;
   }
   .chapter-title{
     font-family:var(--serif);
@@ -219,6 +272,72 @@
     margin:40px 0; font-size:1.2rem; letter-spacing:1em;
   }
 
+  /* TTS per chapter */
+  .chapter-tts-bar{
+    display:flex; align-items:center; gap:6px;
+    padding:8px 0;
+    margin-bottom:16px;
+    border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .chapter-tts-bar button{
+    width:36px; height:36px; border-radius:8px;
+    background:transparent; border:1px solid var(--border); color:var(--ink);
+    cursor:pointer; display:grid; place-items:center; transition:.15s;
+  }
+  .chapter-tts-bar button:hover{ background:color-mix(in srgb,var(--accent) 10%, transparent) }
+  .chapter-tts-bar button.primary{
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#fff; border:none;
+  }
+  .chapter-tts-bar button.primary:hover{ filter:brightness(1.1) }
+  .chapter-tts-bar button svg{ width:18px; height:18px }
+  .chapter-tts-bar select{
+    font:inherit; font-size:.75rem; font-weight:700;
+    padding:5px 22px 5px 8px; border-radius:6px;
+    border:1px solid var(--border); background:var(--paper); color:var(--ink);
+    cursor:pointer; appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 5px center;
+  }
+  .chapter-tts-bar .spacer{ flex:1 }
+  .chapter-tts-bar .check-leido{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:.75rem; font-weight:700; color:var(--muted);
+    cursor:pointer; user-select:none;
+    padding:4px 10px; border-radius:20px; border:1px solid var(--border);
+    transition:.15s;
+  }
+  .chapter-tts-bar .check-leido:hover{ border-color:var(--accent) }
+  .chapter-tts-bar .check-leido.checked{
+    background:var(--ok); color:#fff; border-color:var(--ok);
+  }
+  .chapter-tts-bar .check-leido input{ display:none }
+
+  /* Book mode page navigation */
+  .page-nav{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    display:none; align-items:center; gap:12px;
+    background:var(--paper); border:1px solid var(--border);
+    border-radius:16px; padding:8px 12px;
+    box-shadow:0 20px 50px -20px rgba(0,0,0,.3);
+    z-index:45;
+  }
+  body.book-mode .page-nav{ display:flex }
+  .page-nav button{
+    width:42px; height:42px; border-radius:10px;
+    background:transparent; border:none; color:var(--ink);
+    cursor:pointer; display:grid; place-items:center; transition:.15s;
+  }
+  .page-nav button:hover{ background:color-mix(in srgb,var(--accent) 10%, transparent) }
+  .page-nav button:disabled{ opacity:.3; cursor:not-allowed }
+  .page-nav button svg{ width:20px; height:20px }
+  .page-nav .page-info{
+    font-size:.8rem; font-weight:700; color:var(--muted);
+    min-width:60px; text-align:center;
+  }
+
+  /* Floating TTS bar (global) */
   .tts-bar{
     position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
     background:var(--paper); border:1px solid var(--border);
@@ -227,6 +346,7 @@
     display:flex; align-items:center; gap:6px;
     z-index:40; max-width:calc(100vw - 32px);
   }
+  body.book-mode .tts-bar{ display:none }
   .tts-bar button{
     width:42px; height:42px; border-radius:10px;
     background:transparent; border:none; color:var(--ink);
@@ -325,12 +445,6 @@
     box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
     transition:background-color .3s, box-shadow .3s;
   }
-
-  @media(min-width:900px){
-    .chapter-section .content{
-      column-count:auto;
-    }
-  }
 </style>
 </head>
 <body>
@@ -347,6 +461,12 @@
       </div>
     </div>
     <div class="actions">
+      <button class="icon-btn" id="btnTheme" title="Cambiar tema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <button class="icon-btn" id="btnMode" title="Cambiar vista (scroll/libro)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </button>
       <button class="icon-btn" id="btnFav" title="Favorito">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
@@ -368,9 +488,25 @@
 </div>
 
 <main id="main">
-  <div class="loading">Cargando libro…</div>
+  <div id="book-view">
+    <div class="book-page" id="book-page">
+      <div class="loading">Cargando libro…</div>
+    </div>
+  </div>
 </main>
 
+<!-- Navegación de páginas (solo en modo libro) -->
+<div class="page-nav" id="pageNav">
+  <button id="btnPrevPage" title="Página anterior">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <span class="page-info" id="pageInfo">1 / 1</span>
+  <button id="btnNextPage" title="Página siguiente">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
+</div>
+
+<!-- Barra TTS global (solo en modo scroll) -->
 <div class="tts-bar">
   <button id="btnPlayPause" class="primary" title="Reproducir / Pausar">
     <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -416,6 +552,10 @@
   let ttsGen = 0;
   let capTTSActual = null;
 
+  let bookMode = false;
+  let currentPage = 1;
+  let totalPages = 1;
+
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let toastTimer = null;
@@ -457,7 +597,6 @@
   async function cargarDatos() {
     if (!libroId) throw new Error('No se especificó el libro en la URL');
 
-    // Try Gist first
     if (getToken() && getGistId()) {
       try {
         const gist = await ghRequest('GET', `/gists/${getGistId()}`);
@@ -481,7 +620,6 @@
       }
     }
 
-    // Fallback to localStorage
     const localLibro = localStorage.getItem(`libro-${libroId}.json`);
     if (localLibro) {
       libro = JSON.parse(localLibro);
@@ -590,7 +728,7 @@
   }
 
   function renderContenido() {
-    const main = $('#main');
+    const page = $('#book-page');
     let html = '';
 
     const titulo = entradaBiblioteca?.titulo || 'Sin título';
@@ -618,14 +756,39 @@
       });
     });
 
-    main.innerHTML = html;
+    page.innerHTML = html;
     actualizarProgreso();
+    if (bookMode) updatePageCount();
   }
 
   function renderCap(c, idx) {
     let html = `<section class="chapter" id="cap-${c.id}" data-cap-id="${c.id}">
       <div class="chapter-num">Capítulo ${idx+1}</div>
-      <h2 class="chapter-title">${esc(c.titulo)}</h2>`;
+      <h2 class="chapter-title">${esc(c.titulo)}</h2>
+      <div class="chapter-tts-bar">
+        <button class="primary" data-tts-play="${c.id}" title="Reproducir capítulo">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button data-tts-pause="${c.id}" title="Pausar">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+        </button>
+        <button data-tts-stop="${c.id}" title="Detener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+        </button>
+        <select data-tts-speed="${c.id}" title="Velocidad">
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="1.75">1.75×</option>
+          <option value="2">2×</option>
+        </select>
+        <span class="spacer"></span>
+        <label class="check-leido ${c.leido ? 'checked' : ''}" data-check-leido="${c.id}">
+          <input type="checkbox" ${c.leido ? 'checked' : ''} />
+          ${c.leido ? '✓ Leído' : 'Marcar leído'}
+        </label>
+      </div>`;
 
     c.fragmentosPlanos = [];
     c._fragOffset = 0;
@@ -775,14 +938,25 @@
     if (gen !== ttsGen) return;
     if (!ttsActivo) return;
     if (ttsIdx >= ttsFrags.length) {
+      // Fin del capítulo: intentar siguiente
+      const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+      const idxActual = todosCaps.findIndex(c => c.id === capTTSActual);
       if (capTTSActual) {
-        const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-        const cap = todosCaps.find(c => c.id === capTTSActual);
+        const cap = todosCaps[idxActual];
         if (cap) cap.ttsIndice = ttsFrags.length;
         guardarProgreso();
       }
+      // Reproducir siguiente capítulo automáticamente
+      if (idxActual >= 0 && idxActual < todosCaps.length - 1) {
+        const siguiente = todosCaps[idxActual + 1];
+        if (siguiente.fragmentosPlanos && siguiente.fragmentosPlanos.length > 0) {
+          pararTTS();
+          setTimeout(() => hablarCap(siguiente.id), 300);
+          return;
+        }
+      }
       pararTTS();
-      toast('✓ Capítulo terminado');
+      toast('✓ Libro terminado');
       return;
     }
     if (!mejorVoz) elegirVoz();
@@ -814,7 +988,7 @@
     catch { pararTTS(); }
   }
 
-  function togglePausa() {
+  function togglePausaGlobal() {
     if (!ttsActivo) {
       const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
       if (!todosCaps.length) return;
@@ -855,7 +1029,6 @@
       if (idx >= 0) biblioteca.libros[idx] = { ...entradaBiblioteca };
     }
 
-    // Guardar siempre en localStorage
     localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
     localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
 
@@ -921,6 +1094,20 @@
     toast(entradaBiblioteca.leido ? '✓ Marcado como leído' : 'Marcado como no leído');
   }
 
+  async function toggleLeidoCap(capId) {
+    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+    const cap = todosCaps.find(c => c.id === capId);
+    if (!cap) return;
+    cap.leido = !cap.leido;
+    const label = document.querySelector(`[data-check-leido="${capId}"]`);
+    if (label) {
+      label.classList.toggle('checked', cap.leido);
+      label.innerHTML = `<input type="checkbox" ${cap.leido ? 'checked' : ''} /> ${cap.leido ? '✓ Leído' : 'Marcar leído'}`;
+    }
+    guardarProgreso();
+    toast(cap.leido ? 'Capítulo marcado como leído' : 'Capítulo marcado como no leído');
+  }
+
   function agregarNota(capId, txt) {
     if (!libro || !txt) return;
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -963,6 +1150,38 @@
     guardarProgreso();
   }
 
+  function toggleBookMode() {
+    bookMode = !bookMode;
+    document.body.classList.toggle('book-mode', bookMode);
+    if (bookMode) {
+      updatePageCount();
+      setTimeout(() => scrollToPage(currentPage), 100);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function updatePageCount() {
+    const view = $('#book-view');
+    if (!view) return;
+    const pageWidth = view.clientWidth;
+    const scrollWidth = view.scrollWidth;
+    totalPages = Math.max(1, Math.ceil(scrollWidth / pageWidth));
+    currentPage = Math.min(currentPage, totalPages);
+    $('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
+    $('#btnPrevPage').disabled = currentPage <= 1;
+    $('#btnNextPage').disabled = currentPage >= totalPages;
+  }
+
+  function scrollToPage(n) {
+    const view = $('#book-view');
+    if (!view) return;
+    const pageWidth = view.clientWidth;
+    view.scrollTo({ left: (n - 1) * pageWidth, behavior: 'smooth' });
+    currentPage = n;
+    updatePageCount();
+  }
+
   document.body.addEventListener('click', (e) => {
     const tocItem = e.target.closest('.toc-item');
     if (tocItem && tocItem.dataset.cap) {
@@ -993,6 +1212,46 @@
       input.value = '';
       return;
     }
+
+    // TTS per chapter
+    const playBtn = e.target.closest('[data-tts-play]');
+    if (playBtn) { hablarCap(playBtn.dataset.ttsPlay); return; }
+
+    const pauseBtn = e.target.closest('[data-tts-pause]');
+    if (pauseBtn) {
+      if (ttsActivo && !ttsPausado) {
+        try { window.speechSynthesis.pause(); } catch {}
+        ttsPausado = true;
+        actualizarBotones();
+      } else if (ttsPausado) {
+        try { window.speechSynthesis.resume(); } catch {}
+        ttsPausado = false;
+        actualizarBotones();
+      }
+      return;
+    }
+
+    const stopBtn = e.target.closest('[data-tts-stop]');
+    if (stopBtn) { pararTTS(); return; }
+
+    const speedSelect = e.target.closest('[data-tts-speed]');
+    if (speedSelect) {
+      const capId = speedSelect.dataset.ttsSpeed;
+      ttsVelocidad = parseFloat(speedSelect.value);
+      if (ttsActivo && !ttsPausado) {
+        ttsGen++;
+        const gen = ttsGen;
+        try { window.speechSynthesis.cancel(); } catch {}
+        setTimeout(() => { if (gen === ttsGen) reproducirTrozo(gen); }, 100);
+      }
+      return;
+    }
+
+    const checkLeido = e.target.closest('[data-check-leido]');
+    if (checkLeido) {
+      toggleLeidoCap(checkLeido.dataset.checkLeido);
+      return;
+    }
   });
 
   document.body.addEventListener('keydown', (e) => {
@@ -1005,6 +1264,31 @@
     if (!txt) return;
     agregarNota(capId, txt);
     input.value = '';
+  });
+
+  // Theme selector
+  const THEMES = ['light', 'dark', 'sepia', 'parchment'];
+  let themeIdx = parseInt(localStorage.getItem('lector-theme-idx') || '0', 10);
+  function applyTheme() {
+    const t = THEMES[themeIdx % THEMES.length];
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('lector-theme-idx', String(themeIdx % THEMES.length));
+  }
+  applyTheme();
+
+  $('#btnTheme').addEventListener('click', () => {
+    themeIdx++;
+    applyTheme();
+    toast('Tema: ' + THEMES[themeIdx % THEMES.length]);
+  });
+
+  $('#btnMode').addEventListener('click', toggleBookMode);
+
+  $('#btnPrevPage').addEventListener('click', () => {
+    if (currentPage > 1) scrollToPage(currentPage - 1);
+  });
+  $('#btnNextPage').addEventListener('click', () => {
+    if (currentPage < totalPages) scrollToPage(currentPage + 1);
   });
 
   $('#btnBack').addEventListener('click', async () => {
@@ -1020,7 +1304,7 @@
     $('#tocPanel').classList.toggle('open');
   });
 
-  $('#btnPlayPause').addEventListener('click', togglePausa);
+  $('#btnPlayPause').addEventListener('click', togglePausaGlobal);
   $('#btnStop').addEventListener('click', () => {
     pararTTS();
     toast('Detenido');
@@ -1035,6 +1319,10 @@
     }
   });
 
+  window.addEventListener('resize', () => {
+    if (bookMode) updatePageCount();
+  });
+
   window.addEventListener('pagehide', () => {
     if (ttsActivo) guardarProgreso();
   });
@@ -1046,7 +1334,7 @@
       renderTOC();
       renderContenido();
     } catch (e) {
-      $('#main').innerHTML = `<div class="error">
+      $('#book-page').innerHTML = `<div class="error">
         <h2>Error</h2>
         <p>${esc(e.message)}</p>
         <button class="btn" onclick="window.location.href='index.html'">← Volver a la biblioteca</button>

@@ -67,21 +67,9 @@
   }
   .icon-btn:hover{ color:var(--ink); border-color:var(--accent) }
   .icon-btn svg{ width:20px; height:20px }
-  .icon-btn.fav-on {
-    color: #fff !important;
-    background: #e11d48 !important;
-    border-color: #e11d48 !important;
-  }
-  .icon-btn.leido-on {
-    color: #fff !important;
-    background: #10b981 !important;
-    border-color: #10b981 !important;
-  }
-  .icon-btn.mode-on {
-    color: #fff !important;
-    background: var(--accent) !important;
-    border-color: var(--accent) !important;
-  }
+  .icon-btn.fav-on { color: #fff !important; background: #e11d48 !important; border-color: #e11d48 !important; }
+  .icon-btn.leido-on { color: #fff !important; background: #10b981 !important; border-color: #10b981 !important; }
+  .icon-btn.mode-on { color: #fff !important; background: var(--accent) !important; border-color: var(--accent) !important; }
 
   .progress-bar{height:3px; background:var(--border); position:sticky; top:64px; z-index:49;}
   .progress-bar .fill{height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-2)); width:0%; transition:width .2s;}
@@ -122,10 +110,36 @@
   .toc-item .titulo-toc{flex:1; min-width:0;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; line-height:1.3;}
 
+  /* Floating bar in book mode */
+  .book-floating-bar{
+    display:none; position:fixed; top:70px; left:50%; transform:translateX(-50%);
+    z-index:48; background:var(--paper); border:1px solid var(--border);
+    border-radius:16px; padding:6px 10px; gap:6px;
+    box-shadow:0 10px 30px -10px rgba(0,0,0,.3);
+    max-width:calc(100vw - 32px); align-items:center;
+  }
+  body.book-mode .book-floating-bar{ display:flex; }
+  .book-floating-bar button{
+    width:36px; height:36px; border-radius:8px;
+    border:1px solid var(--border); background:transparent; color:var(--ink);
+    cursor:pointer; display:grid; place-items:center; flex-shrink:0;
+    font-size:.9rem;
+  }
+  .book-floating-bar button:hover{ background:rgba(0,0,0,.06); }
+  .book-floating-bar button.primary{
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#fff; border:none;
+  }
+  .book-floating-bar button svg{ width:16px; height:16px; }
+  .book-floating-bar .floating-info{
+    flex:1; text-align:center; font-size:.82rem; font-weight:700;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    min-width:0; max-width:280px; padding:0 8px; color:var(--ink);
+  }
+
   main{max-width:900px; margin:0 auto; padding:32px 24px 120px; position:relative;}
   @media(max-width:640px){ main{ padding:20px 18px 60px } }
 
-  /* Book mode */
   body.book-mode{
     display:flex; flex-direction:column;
     height:100dvh; overflow:hidden;
@@ -135,7 +149,7 @@
   body.book-mode .toc-panel{ flex-shrink:0; }
   body.book-mode main{
     flex:1; min-height:0; padding:0; max-width:100%; margin:0;
-    overflow:hidden;
+    overflow:hidden; padding-top:60px;
   }
   body.book-mode #book-view{
     height:100%; width:100%;
@@ -153,9 +167,49 @@
   body.book-mode .chapter-divider,
   body.book-mode .book-cover-hero{ break-inside:avoid; }
   body.book-mode .chapter-title,
-  body.book-mode .chapter-num,
+  body.book-mode .chapter-header,
   body.book-mode .chapter-tts-bar,
   body.book-mode .chapter-section h3{ break-inside:avoid; break-after:avoid; }
+
+  /* Chapter collapse/expand */
+  .chapter{ margin-bottom:24px; scroll-margin-top:80px; position:relative; border-bottom:1px solid var(--border); padding-bottom:16px; }
+  .chapter-header{
+    display:flex; align-items:center; gap:10px; padding:10px 0;
+    cursor:pointer; user-select:none;
+  }
+  .chapter-header:hover{ background:rgba(0,0,0,.02); border-radius:6px; padding-left:6px; padding-right:6px; margin-left:-6px; margin-right:-6px; }
+  .quick-play-btn{
+    width:42px; height:42px; border-radius:50%;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    color:#fff; border:none; cursor:pointer;
+    display:grid; place-items:center; flex-shrink:0;
+    font-size:1rem; box-shadow:0 4px 12px rgba(139,69,19,.4);
+    transition:transform .15s;
+  }
+  .quick-play-btn:hover{ transform:scale(1.08); }
+  .quick-play-btn:active{ transform:scale(.95); }
+  .chapter-header-text{ flex:1; min-width:0; }
+  .chapter-header .chapter-num{ margin-bottom:4px; display:block; font-size:.65rem; }
+  .chapter-header .chapter-title{
+    margin:0; font-family:var(--serif); font-size:1.15rem; font-weight:800;
+    line-height:1.2; letter-spacing:-.02em;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .chapter-progress{
+    display:inline-block; font-size:.68rem; font-weight:800;
+    background:var(--accent); color:#fff; padding:2px 8px;
+    border-radius:10px; margin-top:4px;
+  }
+  .expand-icon{
+    font-size:.9rem; color:var(--muted); transition:transform 0.2s;
+    flex-shrink:0; padding:0 4px;
+  }
+  .chapter.collapsed .chapter-body{ display:none; }
+  .chapter:not(.collapsed) .expand-icon{ transform:rotate(180deg); }
+  body.book-mode .chapter.collapsed .chapter-body{ display:block !important; }
+  body.book-mode .chapter-header{ cursor:default; }
+  body.book-mode .chapter-header .expand-icon{ display:none; }
+  body.book-mode .chapter-header:hover{ background:transparent; }
 
   .book-page{
     background:var(--paper);
@@ -173,12 +227,8 @@
     letter-spacing:-.02em; font-weight:800;}
   .book-cover-hero .autor{margin:6px 0 0; font-family:var(--serif); font-style:italic; color:var(--muted); font-size:1rem;}
 
-  .chapter{margin-bottom:60px; scroll-margin-top:80px; position:relative;}
-  .chapter-title{font-family:var(--serif); font-size:1.5rem; font-weight:800; line-height:1.2;
-    letter-spacing:-.02em; margin:0 0 8px; color:var(--ink);}
   .chapter-num{display:inline-block; font-family:var(--sans); font-size:.7rem; font-weight:800;
     color:var(--accent); text-transform:uppercase; letter-spacing:.15em; margin-bottom:10px;}
-  .chapter-num.intro{ color:var(--accent-2); }
 
   .chapter-section{margin:24px 0;}
   .chapter-section h3{font-family:var(--sans); font-size:.78rem; font-weight:800;
@@ -189,15 +239,8 @@
   .chapter-section .content p:last-child{ margin-bottom:0 }
 
   .fragmento{transition: background-color 0.2s, box-shadow 0.2s; border-radius:3px; padding:2px 0;}
-  .fragmento.activo{
-    background-color: rgba(139,69,19,0.3);
-    box-shadow: 0 0 0 2px rgba(139,69,19,0.3);
-  }
-  .fragmento.ultimo{
-    background-color: #fde68a;
-    border-radius:3px; padding:2px 0;
-    box-shadow: 0 0 0 2px #fde68a;
-  }
+  .fragmento.activo{background-color: rgba(139,69,19,0.3); box-shadow: 0 0 0 2px rgba(139,69,19,0.3);}
+  .fragmento.ultimo{background-color: #fde68a; border-radius:3px; padding:2px 0; box-shadow: 0 0 0 2px #fde68a;}
   [data-theme="dark"] .fragmento.ultimo{background-color:#78350f; box-shadow: 0 0 0 2px #78350f;}
   [data-theme="sepia"] .fragmento.ultimo{background-color:#e9d5a1; box-shadow: 0 0 0 2px #e9d5a1;}
   [data-theme="parchment"] .fragmento.ultimo{background-color:#d9c9a8; box-shadow: 0 0 0 2px #d9c9a8;}
@@ -206,7 +249,7 @@
 
   .chapter-tts-bar{
     display:flex; align-items:center; gap:6px;
-    padding:8px 0; margin-bottom:16px;
+    padding:10px 0; margin-bottom:16px;
     border-bottom:1px solid var(--border);
     flex-wrap:wrap;
   }
@@ -214,22 +257,27 @@
     min-width:36px; height:36px; border-radius:8px;
     background:transparent; border:1px solid var(--border); color:var(--ink);
     cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
-    transition:.15s; font: inherit; padding:0 8px;
+    transition:.15s; font: inherit; padding:0 10px; font-size:.85rem;
   }
   .chapter-tts-bar button:hover{ background:rgba(0,0,0,.06) }
   .chapter-tts-bar button.primary{
     background:linear-gradient(135deg, var(--accent), var(--accent-2));
-    color:#fff; border:none;
+    color:#fff; border:none; min-width:40px;
   }
   .chapter-tts-bar button.primary:hover{ filter:brightness(1.1) }
-  .chapter-tts-bar button svg{ width:18px; height:18px }
+  .chapter-tts-bar button svg{ width:16px; height:16px }
+  .chapter-tts-bar button.reiniciar{
+    background:rgba(139,69,19,0.1); color:var(--accent);
+    border-color:var(--accent); font-weight:700;
+  }
   .chapter-tts-bar select{
     font:inherit; font-size:.75rem; font-weight:700;
-    padding:6px 22px 6px 8px; border-radius:6px;
+    padding:8px 22px 8px 8px; border-radius:6px;
     border:1px solid var(--border); background:var(--paper); color:var(--ink);
     cursor:pointer; appearance:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat:no-repeat; background-position:right 5px center;
+    max-width:200px;
   }
   .chapter-tts-bar .spacer{ flex:1 }
   .chapter-tts-bar .check-leido{
@@ -242,19 +290,13 @@
     display:inline-flex; align-items:center; justify-content:center; gap:4px;
   }
   .chapter-tts-bar .check-leido:hover{ border-color:var(--ok); color:var(--ok); }
-  .chapter-tts-bar .check-leido.checked{
-    background:#10b981 !important;
-    color:#fff !important;
-    border-color:#10b981 !important;
-    font-weight: 800;
-  }
+  .chapter-tts-bar .check-leido.checked{ background:#10b981 !important; color:#fff !important; border-color:#10b981 !important; font-weight: 800; }
   .chapter-tts-bar .resume-btn{
     font: inherit; font-size:.72rem; font-weight:700;
     padding:8px 14px; border-radius:20px;
     border:1px solid var(--accent);
-    background:rgba(139,69,19,0.12);
-    color:var(--accent); cursor:pointer;
-    transition:.15s;
+    background:rgba(139,69,19,0.12); color:var(--accent);
+    cursor:pointer; transition:.15s;
     min-height:36px; display:inline-flex; align-items:center;
   }
   .chapter-tts-bar .resume-btn:hover{ background:rgba(139,69,19,0.22); }
@@ -268,53 +310,32 @@
     z-index:45;
   }
   body.book-mode .page-nav{ display:flex }
-  .page-nav button{
-    width:42px; height:42px; border-radius:10px;
-    background:transparent; border:none; color:var(--ink);
-    cursor:pointer; display:grid; place-items:center; transition:.15s;
-  }
+  .page-nav button{width:42px; height:42px; border-radius:10px; background:transparent; border:none; color:var(--ink); cursor:pointer; display:grid; place-items:center; transition:.15s;}
   .page-nav button:hover{ background:rgba(0,0,0,.06) }
   .page-nav button:disabled{ opacity:.3; cursor:not-allowed }
   .page-nav button svg{ width:20px; height:20px }
   .page-nav .page-info{ font-size:.8rem; font-weight:700; color:var(--muted); min-width:60px; text-align:center; }
 
-  #toast{
-    position:fixed; left:50%; bottom:90px; transform:translate(-50%,20px);
-    background:var(--ink); color:var(--paper); padding:10px 18px; border-radius:10px;
-    font-size:.85rem; font-weight:600; opacity:0; pointer-events:none; transition:.25s;
-    z-index:60; box-shadow:0 10px 30px -10px rgba(0,0,0,.5); max-width:90vw; text-align:center;
-  }
+  #toast{position:fixed; left:50%; bottom:90px; transform:translate(-50%,20px); background:var(--ink); color:var(--paper); padding:10px 18px; border-radius:10px; font-size:.85rem; font-weight:600; opacity:0; pointer-events:none; transition:.25s; z-index:60; box-shadow:0 10px 30px -10px rgba(0,0,0,.5); max-width:90vw; text-align:center;}
   #toast.show{ opacity:1; transform:translate(-50%,0) }
 
   .loading{text-align:center; padding:100px 20px; color:var(--muted); font-family:var(--serif); font-size:1.1rem;}
   .error{text-align:center; padding:60px 20px; color:var(--muted);}
   .error h2{font-family:var(--serif); color:var(--ink); margin:0 0 12px}
-  .error .btn{font:inherit; font-size:.9rem; font-weight:700; padding:10px 20px; border-radius:10px;
-    background:var(--accent); color:#fff; border:none; cursor:pointer; margin-top:20px;}
+  .error .btn{font:inherit; font-size:.9rem; font-weight:700; padding:10px 20px; border-radius:10px; background:var(--accent); color:#fff; border:none; cursor:pointer; margin-top:20px;}
 
   .notas-section{margin-top:24px; padding-top:20px; border-top:1px dashed var(--border);}
-  .notas-section h4{font-family:var(--sans); font-size:.75rem; font-weight:800;
-    color:var(--muted); text-transform:uppercase; letter-spacing:.08em;
-    margin:0 0 10px; display:flex; align-items:center; gap:6px;}
-  .nota-item{display:flex; gap:8px; align-items:flex-start; padding:8px 10px; border-radius:8px;
-    background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); margin-bottom:6px; font-size:.9rem;}
+  .notas-section h4{font-family:var(--sans); font-size:.75rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:0 0 10px; display:flex; align-items:center; gap:6px;}
+  .nota-item{display:flex; gap:8px; align-items:flex-start; padding:8px 10px; border-radius:8px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); margin-bottom:6px; font-size:.9rem;}
   .nota-item .texto{flex:1; font-family:var(--serif); line-height:1.5 }
-  .nota-item .del{background:none; border:none; color:var(--muted); width:22px; height:22px; border-radius:6px;
-    cursor:pointer; display:grid; place-items:center; flex-shrink:0;}
+  .nota-item .del{background:none; border:none; color:var(--muted); width:22px; height:22px; border-radius:6px; cursor:pointer; display:grid; place-items:center; flex-shrink:0;}
   .nota-item .del:hover{ color:var(--accent); background:rgba(0,0,0,.06) }
   .nota-add{display:flex; gap:6px; margin-top:8px;}
-  .nota-add input{font:inherit; font-size:.9rem; padding:8px 12px; border:1px solid var(--border); border-radius:8px;
-    background:var(--paper); color:var(--ink); outline:none; flex:1; min-width:0; font-family:var(--serif);}
+  .nota-add input{font:inherit; font-size:.9rem; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--paper); color:var(--ink); outline:none; flex:1; min-width:0; font-family:var(--serif);}
   .nota-add input:focus{ border-color:var(--accent) }
-  .nota-add button{font:inherit; font-size:.85rem; font-weight:700; padding:0 14px; border-radius:8px;
-    border:none; background:var(--accent); color:#fff; cursor:pointer; flex-shrink:0;}
+  .nota-add button{font:inherit; font-size:.85rem; font-weight:700; padding:0 14px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; flex-shrink:0;}
 
-  .chapter.subrayado{
-    background:rgba(139,69,19,0.08);
-    border-radius:4px;
-    box-shadow:0 0 0 2px rgba(139,69,19,0.2);
-    transition:background-color .3s, box-shadow .3s;
-  }
+  .chapter.subrayado{ background:rgba(139,69,19,0.06); border-radius:4px; box-shadow:0 0 0 2px rgba(139,69,19,0.15); transition:background-color .3s, box-shadow .3s; }
 </style>
 </head>
 <body>
@@ -362,6 +383,14 @@
   <button data-theme="dark">🌙 Oscuro</button>
   <button data-theme="sepia">📜 Sepia</button>
   <button data-theme="parchment">📖 Pergamino</button>
+</div>
+
+<div class="book-floating-bar" id="bookFloatingBar">
+  <button id="btnPrevChapter" title="Capítulo anterior">⏮</button>
+  <div class="floating-info" id="currentChapterLabel">Cargando…</div>
+  <button class="primary" id="btnPlayCurrent" title="Reproducir capítulo">▶</button>
+  <button id="btnPauseCurrent" title="Pausar">⏸</button>
+  <button id="btnNextChapter" title="Capítulo siguiente">⏭</button>
 </div>
 
 <main id="main">
@@ -424,6 +453,11 @@
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
 
+  function findCap(capId) {
+    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+    return todosCaps.find(c => c.id === capId);
+  }
+
   async function fetchConTimeout(url, opts = {}, ms = 20000) {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), ms);
@@ -460,11 +494,9 @@
     return total > 0 ? Math.round((suma / total) * 100) : 0;
   }
 
-  // ═══ CARGAR DATOS: SIEMPRE SINCRONIZAR CON GIST ═══
   async function cargarDatos() {
     if (!libroId) throw new Error('No libro');
 
-    // 1. Cargar local primero
     try {
       const localLibro = localStorage.getItem(`libro-${libroId}.json`);
       if (localLibro) { libro = JSON.parse(localLibro); libro.id = libroId; }
@@ -478,13 +510,11 @@
       }
     } catch (e) { console.warn('local bib:', e); }
 
-    // 2. SIEMPRE traer del Gist si hay sync (para tener la versión más reciente)
     if (getToken() && getGistId()) {
       try {
-        console.log('🔄 Lector: sincronizando con Gist…');
+        console.log('🔄 Lector: sincronizando…');
         const gist = await ghRequest('GET', `/gists/${getGistId()}`);
 
-        // Actualizar biblioteca (con progreso)
         const bibFile = gist.files && gist.files['biblioteca.json'];
         if (bibFile) {
           const c = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
@@ -493,41 +523,42 @@
           if (gistEntrada) {
             const pLocal = entradaBiblioteca ? (Number(entradaBiblioteca.progreso) || 0) : 0;
             const pGist = Number(gistEntrada.progreso) || 0;
-            if (!entradaBiblioteca || pGist >= pLocal) {
-              entradaBiblioteca = gistEntrada;
-              biblioteca = gistBib;
-              localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
-              console.log(`📥 Biblioteca actualizada del Gist (progreso ${pGist}%)`);
-            }
+            const base = (!entradaBiblioteca || pGist >= pLocal) ? gistEntrada : entradaBiblioteca;
+            const merged = {
+              ...base,
+              progreso: Math.max(pLocal, pGist),
+              enProgreso: (entradaBiblioteca?.enProgreso || gistEntrada.enProgreso) || false,
+              leido: (entradaBiblioteca?.leido || gistEntrada.leido) || false,
+              favorito: (entradaBiblioteca?.favorito || gistEntrada.favorito) || false,
+            };
+            entradaBiblioteca = merged;
+            if (!biblioteca) biblioteca = gistBib;
+            const idx = biblioteca.libros.findIndex(l => l.id === libroId);
+            if (idx >= 0) biblioteca.libros[idx] = merged;
+            else biblioteca.libros.push(merged);
+            localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
           }
         }
 
-        // Actualizar libro (con ttsIndice de cada capítulo)
         const libFile = gist.files && gist.files[`libro-${libroId}.json`];
         if (libFile) {
           const c = libFile.truncated ? await (await fetchConTimeout(libFile.raw_url)).text() : libFile.content;
           const gistLibro = JSON.parse(c);
           gistLibro.id = libroId;
-
           const totalLocal = libro ? calcularProgresoLibro(libro) : 0;
           const totalGist = calcularProgresoLibro(gistLibro);
           if (!libro || totalGist >= totalLocal) {
             libro = gistLibro;
             localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
-            console.log(`📥 Libro actualizado del Gist (progreso ${totalGist}%)`);
-          } else {
-            console.log(`📖 Libro local tiene más progreso (${totalLocal}% > ${totalGist}%), manteniendo local`);
           }
         }
-      } catch (e) {
-        console.warn('Gist sync en lector:', e.message);
-      }
+      } catch (e) { console.warn('Gist sync:', e.message); }
     }
 
     if (!libro) throw new Error('Libro no encontrado');
     if (!biblioteca) biblioteca = { version: 2, libros: [], preferencias: {} };
     if (!entradaBiblioteca) {
-      entradaBiblioteca = { id: libroId, titulo: 'Libro', autor: '', progreso: 0, leido: false, favorito: false };
+      entradaBiblioteca = { id: libroId, titulo: 'Libro', autor: '', progreso: 0, enProgreso: false, leido: false, favorito: false };
       biblioteca.libros.push(entradaBiblioteca);
     }
   }
@@ -633,54 +664,16 @@
 
     page.innerHTML = html;
     actualizarProgreso();
-
-    setTimeout(() => {
-      const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-      todosCaps.forEach(c => {
-        if ((c.ttsIndice || 0) > 0) actualizarBotonReanudar(c.id);
-      });
-    }, 100);
   }
 
   function renderCap(c, idx) {
     const tipo = tipoCapitulo(c.titulo);
     const ttsIndice = c.ttsIndice || 0;
     const leido = c.leido || false;
+    const isActive = ttsIndice > 0;
+    const capClass = isActive ? '' : 'collapsed';
 
-    let headHtml = '';
-    if (tipo === 'intro' || tipo === 'con-numero') {
-      headHtml = `<h2 class="chapter-title">${esc(c.titulo)}</h2>`;
-    } else {
-      headHtml = `<div class="chapter-num">Capítulo ${idx+1}</div><h2 class="chapter-title">${esc(c.titulo)}</h2>`;
-    }
-
-    let html = `<section class="chapter" id="cap-${c.id}" data-cap-id="${c.id}">
-      ${headHtml}
-      <div class="chapter-tts-bar">
-        <button class="primary" data-tts-play="${c.id}" title="Reproducir">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button data-tts-pause="${c.id}" title="Pausar">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
-        </button>
-        <button data-tts-stop="${c.id}" title="Detener">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
-        </button>
-        <select data-tts-speed="${c.id}" title="Velocidad">
-          <option value="0.75">0.75×</option>
-          <option value="1" selected>1×</option>
-          <option value="1.25">1.25×</option>
-          <option value="1.5">1.5×</option>
-          <option value="1.75">1.75×</option>
-          <option value="2">2×</option>
-        </select>
-        ${ttsIndice > 0 ? `<button class="resume-btn" data-resume="${c.id}" title="Reanudar">⏵ Reanudar (${ttsIndice+1})</button>` : ''}
-        <span class="spacer"></span>
-        <button class="check-leido ${leido ? 'checked' : ''}" data-check-leido="${c.id}">
-          ${leido ? '✓ Leído' : 'Marcar leído'}
-        </button>
-      </div>`;
-
+    // Build body first (populates fragmentosPlanos)
     c.fragmentosPlanos = [];
     c._fragOffset = 0;
 
@@ -704,13 +697,61 @@
       return htmlSec;
     }
 
-    if (c.resumen) html += renderSeccion('Resumen', c.resumen);
-    if (c.puntos) html += renderSeccion('Puntos importantes', c.puntos);
-    if (c.aplicacion) html += renderSeccion('Aplicación', c.aplicacion);
-    if (c.enseñanza) html += renderSeccion('Enseñanza', c.enseñanza);
-    if (c.preguntas && c.preguntas.length) html += renderSeccion('Preguntas', c.preguntas.join('\n\n'));
+    let bodyHtml = '';
+    if (c.resumen) bodyHtml += renderSeccion('Resumen', c.resumen);
+    if (c.puntos) bodyHtml += renderSeccion('Puntos importantes', c.puntos);
+    if (c.aplicacion) bodyHtml += renderSeccion('Aplicación', c.aplicacion);
+    if (c.enseñanza) bodyHtml += renderSeccion('Enseñanza', c.enseñanza);
+    if (c.preguntas && c.preguntas.length) bodyHtml += renderSeccion('Preguntas', c.preguntas.join('\n\n'));
 
-    html += `<div class="notas-section">
+    const totalFrags = c.fragmentosPlanos.length;
+    const pct = totalFrags > 0 ? Math.round(ttsIndice / totalFrags * 100) : 0;
+
+    const fragOptions = c.fragmentosPlanos.map((frag, i) =>
+      `<option value="${i}" ${i === ttsIndice ? 'selected' : ''}>Párrafo ${i+1}: ${esc(frag.slice(0, 30))}${frag.length > 30 ? '…' : ''}</option>`
+    ).join('');
+
+    const headHtml = `<div class="chapter-header" data-cap-toggle="${c.id}">
+      <button class="quick-play-btn" data-tts-play="${c.id}" title="Reproducir">▶</button>
+      <div class="chapter-header-text">
+        ${tipo === 'intro' ? '' : tipo === 'con-numero' ? '' : `<span class="chapter-num">Capítulo ${idx+1}</span>`}
+        <h2 class="chapter-title">${esc(c.titulo)}</h2>
+        ${pct > 0 ? `<span class="chapter-progress">${pct}%</span>` : ''}
+      </div>
+      <span class="expand-icon">▼</span>
+    </div>`;
+
+    const ttsBarHtml = `<div class="chapter-tts-bar">
+      <button class="primary" data-tts-play="${c.id}" title="Reproducir">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button data-tts-pause="${c.id}" title="Pausar">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+      </button>
+      <button data-tts-stop="${c.id}" title="Detener">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M6 6h12v12H6z"/></svg>
+      </button>
+      <select data-tts-speed="${c.id}" title="Velocidad">
+        <option value="0.75">0.75×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+        <option value="1.75">1.75×</option>
+        <option value="2">2×</option>
+      </select>
+      <button class="reiniciar" data-tts-reiniciar="${c.id}" title="Empezar de nuevo">🔄</button>
+      ${ttsIndice > 0 ? `<button class="resume-btn" data-resume="${c.id}" title="Reanudar">⏵ Reanudar (${ttsIndice+1})</button>` : ''}
+      <select class="frag-selector" data-frag-select="${c.id}" title="Ir a párrafo">
+        <option value="" disabled ${ttsIndice === 0 ? 'selected' : ''}>Ir a párrafo…</option>
+        ${fragOptions}
+      </select>
+      <span class="spacer"></span>
+      <button class="check-leido ${leido ? 'checked' : ''}" data-check-leido="${c.id}">
+        ${leido ? '✓ Leído' : 'Marcar leído'}
+      </button>
+    </div>`;
+
+    const notesHtml = `<div class="notas-section">
       <h4>📝 Notas</h4>
       <div class="notas-list" id="notas-${c.id}">
         ${(c.notas || []).map((n, i) => `
@@ -728,8 +769,14 @@
       </div>
     </div>`;
 
-    html += `</section>`;
-    return html;
+    return `<section class="chapter ${capClass}" id="cap-${c.id}" data-cap-id="${c.id}">
+      ${headHtml}
+      <div class="chapter-body">
+        ${ttsBarHtml}
+        ${bodyHtml}
+        ${notesHtml}
+      </div>
+    </section>`;
   }
 
   function elegirVoz() {
@@ -771,8 +818,7 @@
   }
 
   function actualizarBotonReanudar(capId) {
-    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-    const cap = todosCaps.find(c => c.id === capId);
+    const cap = findCap(capId);
     if (!cap) return;
     const capEl = document.getElementById(`cap-${capId}`);
     if (!capEl) return;
@@ -780,7 +826,9 @@
     if (!bar) return;
     const existing = bar.querySelector('[data-resume]');
     const ttsIndice = cap.ttsIndice || 0;
-    if (ttsIndice > 0) {
+    const total = (cap.fragmentosPlanos || []).length;
+    const showResume = ttsIndice > 0 && ttsIndice < total;
+    if (showResume) {
       if (!existing) {
         const btn = document.createElement('button');
         btn.className = 'resume-btn';
@@ -810,8 +858,7 @@
 
   function hablarCap(capId) {
     if (!('speechSynthesis' in window)) { toast('Sin voz'); return; }
-    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-    const cap = todosCaps.find(c => c.id === capId);
+    const cap = findCap(capId);
     if (!cap) return;
     if (!cap.fragmentosPlanos || !cap.fragmentosPlanos.length) { toast('Sin contenido'); return; }
 
@@ -819,18 +866,71 @@
     ttsGen++;
     const gen = ttsGen;
     ttsFrags = cap.fragmentosPlanos;
-    ttsIdx = Math.min(cap.ttsIndice || 0, ttsFrags.length - 1);
+    let startIdx = cap.ttsIndice || 0;
+    if (startIdx >= ttsFrags.length) {
+      startIdx = 0;
+      cap.ttsIndice = 0;
+    }
+    ttsIdx = startIdx;
     ttsActivo = true;
     capTTSActual = capId;
 
+    // Marcar enProgreso=true para el filtro de index
+    if (entradaBiblioteca) {
+      entradaBiblioteca.enProgreso = true;
+      entradaBiblioteca.fecha = Date.now();
+    }
+    if (biblioteca) {
+      const idx = biblioteca.libros.findIndex(l => l.id === libroId);
+      if (idx >= 0) {
+        biblioteca.libros[idx].enProgreso = true;
+        biblioteca.libros[idx].fecha = Date.now();
+      }
+    }
+    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+
     const capEl = document.getElementById(`cap-${capId}`);
     if (capEl) {
+      capEl.classList.remove('collapsed');
       capEl.classList.add('subrayado');
       if (!bookMode) capEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     document.querySelectorAll(`.toc-item[data-cap="${capId}"]`).forEach(t => t.classList.add('current'));
 
     setTimeout(() => reproducirTrozo(gen), 100);
+  }
+
+  function reiniciarCap(capId) {
+    const cap = findCap(capId);
+    if (!cap) return;
+    cap.ttsIndice = 0;
+    actualizarBotonReanudar(capId);
+    const capEl = document.getElementById(`cap-${capId}`);
+    if (capEl) {
+      capEl.querySelectorAll('.fragmento.ultimo').forEach(el => el.classList.remove('ultimo'));
+      const first = capEl.querySelector('.fragmento[data-frag-index="0"]');
+      if (first) first.classList.add('ultimo');
+    }
+    pararTTS();
+    setTimeout(() => hablarCap(capId), 100);
+    toast('🔄 Reiniciando capítulo…');
+  }
+
+  function jumpToFragment(capId, fragIdx) {
+    const cap = findCap(capId);
+    if (!cap) return;
+    if (fragIdx < 0 || fragIdx >= (cap.fragmentosPlanos || []).length) return;
+    cap.ttsIndice = fragIdx;
+    actualizarBotonReanudar(capId);
+    const capEl = document.getElementById(`cap-${capId}`);
+    if (capEl) {
+      capEl.querySelectorAll('.fragmento.ultimo').forEach(el => el.classList.remove('ultimo'));
+      const target = capEl.querySelector(`.fragmento[data-frag-index="${fragIdx}"]`);
+      if (target) target.classList.add('ultimo');
+    }
+    pararTTS();
+    setTimeout(() => hablarCap(capId), 100);
+    toast(`⏵ Párrafo ${fragIdx + 1}`);
   }
 
   function reproducirTrozo(gen) {
@@ -861,8 +961,7 @@
 
     if (capTTSActual) {
       destacarFragmento(capTTSActual, ttsIdx);
-      const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-      const cap = todosCaps.find(c => c.id === capTTSActual);
+      const cap = findCap(capTTSActual);
       if (cap) cap.ttsIndice = ttsIdx;
       actualizarBotonReanudar(capTTSActual);
       guardarProgreso();
@@ -876,8 +975,7 @@
     u.onend = () => {
       if (gen !== ttsGen) return;
       if (capTTSActual) {
-        const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-        const cap = todosCaps.find(c => c.id === capTTSActual);
+        const cap = findCap(capTTSActual);
         if (cap) cap.ttsIndice = Math.min(ttsIdx + 1, ttsFrags.length);
         guardarProgreso();
       }
@@ -894,7 +992,6 @@
     catch { pararTTS(); }
   }
 
-  // ═══ GUARDAR PROGRESO: local inmediato + Gist debounce 800ms ═══
   function guardarProgreso() {
     if (!libro) return;
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -905,36 +1002,34 @@
       sumaFrags += Math.min(c.ttsIndice || 0, c.fragmentosPlanos.length);
     }
     const pct = totalFrags > 0 ? Math.round((sumaFrags / totalFrags) * 100) : 0;
+    const enProgreso = sumaFrags > 0 || (entradaBiblioteca?.enProgreso === true);
 
-    // Actualizar biblioteca con fecha nueva
     if (biblioteca) {
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) {
         biblioteca.libros[idx].progreso = pct;
         biblioteca.libros[idx].fecha = Date.now();
+        if (enProgreso) biblioteca.libros[idx].enProgreso = true;
       } else if (entradaBiblioteca) {
         entradaBiblioteca.progreso = pct;
         entradaBiblioteca.fecha = Date.now();
+        if (enProgreso) entradaBiblioteca.enProgreso = true;
         biblioteca.libros.push(entradaBiblioteca);
       }
     }
     if (entradaBiblioteca) {
       entradaBiblioteca.progreso = pct;
       entradaBiblioteca.fecha = Date.now();
+      if (enProgreso) entradaBiblioteca.enProgreso = true;
     }
 
-    // Persistir local
     try {
       localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
       localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
-      console.log(`💾 Guardado: ${pct}% (${sumaFrags}/${totalFrags} frags)`);
-    } catch (e) {
-      console.error('❌ localStorage save error:', e);
-    }
+      console.log(`💾 Guardado: ${pct}% (${sumaFrags}/${totalFrags} frags) enProgreso=${enProgreso}`);
+    } catch (e) { console.error('localStorage save:', e); }
 
     actualizarProgreso();
-
-    // Gist con debounce corto (800ms) para no saturar
     clearTimeout(window._gistTimer);
     window._gistTimer = setTimeout(guardarEnGistDebounced, 800);
   }
@@ -948,8 +1043,8 @@
           'biblioteca.json': { content: JSON.stringify(biblioteca) }
         }
       });
-      console.log('✅ Progreso subido al Gist');
-    } catch (e) { console.warn('⚠ Gist save:', e.message); }
+      console.log('✅ Progreso al Gist');
+    } catch (e) { console.warn('Gist save:', e.message); }
   }
 
   function actualizarProgreso() {
@@ -992,8 +1087,7 @@
   }
 
   function toggleLeidoCap(capId) {
-    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-    const cap = todosCaps.find(c => c.id === capId);
+    const cap = findCap(capId);
     if (!cap) return;
     cap.leido = !cap.leido;
     const btn = document.querySelector(`[data-check-leido="${capId}"]`);
@@ -1007,8 +1101,7 @@
 
   function agregarNota(capId, txt) {
     if (!libro || !txt) return;
-    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-    const cap = todosCaps.find(c => c.id === capId);
+    const cap = findCap(capId);
     if (!cap) return;
     cap.notas = cap.notas || [];
     cap.notas.push(txt);
@@ -1029,8 +1122,7 @@
 
   function eliminarNota(capId, idx) {
     if (!libro) return;
-    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-    const cap = todosCaps.find(c => c.id === capId);
+    const cap = findCap(capId);
     if (!cap || !cap.notas) return;
     cap.notas.splice(idx, 1);
     const cont = document.getElementById(`notas-${capId}`);
@@ -1047,7 +1139,6 @@
     guardarProgreso();
   }
 
-  // ═══ PASO DE PÁGINA ═══
   function getScrollStep() {
     const view = $('#book-view');
     if (!view) return 0;
@@ -1073,14 +1164,7 @@
     const colsVisible = isMobile ? 1 : 2;
     const colW = Math.floor((vw - padding * 2 - gap * (colsVisible - 1)) / colsVisible);
 
-    page.style.cssText = `
-      width: ${colW}px;
-      height: auto;
-      padding: ${padding}px;
-      box-sizing: border-box;
-      column-count: 1;
-      column-gap: 0;
-    `;
+    page.style.cssText = `width: ${colW}px; height: auto; padding: ${padding}px; box-sizing: border-box; column-count: 1; column-gap: 0;`;
     void page.offsetHeight;
     const contentH = page.scrollHeight - padding * 2;
     const availH = vh - padding * 2;
@@ -1098,6 +1182,7 @@
     `;
 
     setTimeout(updatePageInfo, 100);
+    setTimeout(updateFloatingBar, 200);
   }
 
   function toggleBookMode() {
@@ -1122,17 +1207,85 @@
     $('#btnNextPage').disabled = currentSpread >= totalSpreads;
   }
 
+  function getVisibleChapterId() {
+    if (!bookMode) return capTTSActual;
+    const view = $('#book-view');
+    if (!view) return null;
+    const viewRect = view.getBoundingClientRect();
+    const viewLeft = viewRect.left;
+    const viewRight = viewRect.right;
+
+    let best = null;
+    let bestOverlap = 0;
+
+    view.querySelectorAll('.chapter[id^="cap-"]').forEach(ch => {
+      const r = ch.getBoundingClientRect();
+      const overlap = Math.max(0, Math.min(r.right, viewRight) - Math.max(r.left, viewLeft));
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        best = ch;
+      }
+    });
+
+    return best?.dataset.capId || capTTSActual;
+  }
+
+  function updateFloatingBar() {
+    if (!bookMode) return;
+    const capId = getVisibleChapterId();
+    if (capId) {
+      const cap = findCap(capId);
+      if (cap) {
+        $('#currentChapterLabel').textContent = cap.titulo;
+        $('#btnPlayCurrent').dataset.cap = capId;
+      }
+    }
+  }
+
+  function goToChapter(capId) {
+    const el = document.getElementById(`cap-${capId}`);
+    if (!el) return;
+    if (bookMode) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+    } else {
+      el.classList.remove('collapsed');
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function goToPrevChapter() {
+    const curr = getVisibleChapterId();
+    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+    const idx = todosCaps.findIndex(c => c.id === curr);
+    if (idx > 0) goToChapter(todosCaps[idx - 1].id);
+    else if (idx === 0) toast('Primer capítulo');
+  }
+
+  function goToNextChapter() {
+    const curr = getVisibleChapterId();
+    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+    const idx = todosCaps.findIndex(c => c.id === curr);
+    if (idx >= 0 && idx < todosCaps.length - 1) goToChapter(todosCaps[idx + 1].id);
+    else if (idx === todosCaps.length - 1) toast('Último capítulo');
+  }
+
   document.body.addEventListener('click', (e) => {
+    // Chapter header toggle (only in scroll mode)
+    const headerToggle = e.target.closest('.chapter-header');
+    if (headerToggle && !e.target.closest('.quick-play-btn') && !bookMode) {
+      const capId = headerToggle.dataset.capToggle;
+      const capEl = document.getElementById(`cap-${capId}`);
+      if (capEl) capEl.classList.toggle('collapsed');
+      return;
+    }
+
     const tocItem = e.target.closest('.toc-item');
     if (tocItem && tocItem.dataset.cap) {
       const capId = tocItem.dataset.cap;
-      const capEl = document.getElementById(`cap-${capId}`);
-      if (capEl) {
-        capEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        document.querySelectorAll('.toc-item.current').forEach(t => t.classList.remove('current'));
-        tocItem.classList.add('current');
-        $('#tocPanel').classList.remove('open');
-      }
+      goToChapter(capId);
+      document.querySelectorAll('.toc-item.current').forEach(t => t.classList.remove('current'));
+      tocItem.classList.add('current');
+      $('#tocPanel').classList.remove('open');
       return;
     }
 
@@ -1151,7 +1304,13 @@
     }
 
     const playBtn = e.target.closest('[data-tts-play]');
-    if (playBtn) { hablarCap(playBtn.dataset.ttsPlay); return; }
+    if (playBtn) {
+      const capId = playBtn.dataset.ttsPlay;
+      const capEl = document.getElementById(`cap-${capId}`);
+      if (capEl) capEl.classList.remove('collapsed');
+      hablarCap(capId);
+      return;
+    }
 
     const pauseBtn = e.target.closest('[data-tts-pause]');
     if (pauseBtn) {
@@ -1180,6 +1339,9 @@
       return;
     }
 
+    const reiniciarBtn = e.target.closest('[data-tts-reiniciar]');
+    if (reiniciarBtn) { reiniciarCap(reiniciarBtn.dataset.ttsReiniciar); return; }
+
     const resumeBtn = e.target.closest('[data-resume]');
     if (resumeBtn) { hablarCap(resumeBtn.dataset.resume); return; }
 
@@ -1197,6 +1359,15 @@
       }
       return;
     }
+  });
+
+  // Fragment selector: change event
+  document.body.addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-frag-select]');
+    if (!sel) return;
+    const capId = sel.dataset.fragSelect;
+    const fragIdx = parseInt(sel.value, 10);
+    if (!isNaN(fragIdx)) jumpToFragment(capId, fragIdx);
   });
 
   document.body.addEventListener('keydown', (e) => {
@@ -1248,25 +1419,40 @@
 
   $('#btnPrevPage').addEventListener('click', () => {
     const view = $('#book-view');
-    const step = getScrollStep();
-    view.scrollBy({ left: -step, behavior: 'smooth' });
+    view.scrollBy({ left: -getScrollStep(), behavior: 'smooth' });
   });
-
   $('#btnNextPage').addEventListener('click', () => {
     const view = $('#book-view');
-    const step = getScrollStep();
-    view.scrollBy({ left: step, behavior: 'smooth' });
+    view.scrollBy({ left: getScrollStep(), behavior: 'smooth' });
   });
 
-  $('#book-view').addEventListener('scroll', updatePageInfo);
-
-  window.addEventListener('resize', () => {
-    if (bookMode) applyBookMode();
+  $('#book-view').addEventListener('scroll', () => {
+    updatePageInfo();
+    updateFloatingBar();
   });
+
+  // Floating bar controls
+  $('#btnPlayCurrent').addEventListener('click', () => {
+    const capId = $('#btnPlayCurrent').dataset.cap;
+    if (capId) hablarCap(capId);
+  });
+  $('#btnPauseCurrent').addEventListener('click', () => {
+    if (ttsActivo && !ttsPausado) {
+      window.speechSynthesis.pause();
+      ttsPausado = true;
+      guardarProgreso();
+    } else if (ttsPausado) {
+      window.speechSynthesis.resume();
+      ttsPausado = false;
+    }
+  });
+  $('#btnPrevChapter').addEventListener('click', goToPrevChapter);
+  $('#btnNextChapter').addEventListener('click', goToNextChapter);
+
+  window.addEventListener('resize', () => { if (bookMode) applyBookMode(); });
 
   $('#btnBack').addEventListener('click', async () => {
     guardarProgreso();
-    // Forzar guardado al Gist antes de salir
     if (getToken() && getGistId()) {
       clearTimeout(window._gistTimer);
       try {
@@ -1276,27 +1462,20 @@
             'biblioteca.json': { content: JSON.stringify(biblioteca) }
           }
         });
-        console.log('✅ Progreso final subido al Gist');
-      } catch (e) { console.warn('⚠ Gist final:', e.message); }
+        console.log('✅ Progreso final al Gist');
+      } catch (e) { console.warn('Gist final:', e.message); }
     }
     pararTTS();
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 150));
     window.location.href = 'index.html';
   });
 
   $('#btnFav').addEventListener('click', toggleFav);
   $('#btnLeido').addEventListener('click', toggleLeido);
+  $('#tocToggle').addEventListener('click', () => { $('#tocPanel').classList.toggle('open'); });
 
-  $('#tocToggle').addEventListener('click', () => {
-    $('#tocPanel').classList.toggle('open');
-  });
-
-  window.addEventListener('pagehide', () => {
-    try { guardarProgreso(); } catch(e) {}
-  });
-  window.addEventListener('beforeunload', () => {
-    try { guardarProgreso(); } catch(e) {}
-  });
+  window.addEventListener('pagehide', () => { try { guardarProgreso(); } catch(e) {} });
+  window.addEventListener('beforeunload', () => { try { guardarProgreso(); } catch(e) {} });
 
   (async function init() {
     try {
@@ -1304,7 +1483,7 @@
       renderHeader();
       renderTOC();
       renderContenido();
-      console.log('✅ lector.html v18 cargado. Progreso:', entradaBiblioteca?.progreso);
+      console.log('✅ lector.html v19. Progreso:', entradaBiblioteca?.progreso, 'enProgreso:', entradaBiblioteca?.enProgreso);
 
       setTimeout(() => {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -1316,14 +1495,11 @@
             document.querySelectorAll(`.toc-item[data-cap="${capActivo.id}"]`).forEach(t => t.classList.add('current'));
           }
         }
+        updateFloatingBar();
       }, 400);
     } catch (e) {
-      console.error('Init error:', e);
-      $('#book-page').innerHTML = `<div class="error">
-        <h2>Error</h2>
-        <p>${esc(e.message)}</p>
-        <button class="btn" onclick="window.location.href='index.html'">← Volver</button>
-      </div>`;
+      console.error('Init:', e);
+      $('#book-page').innerHTML = `<div class="error"><h2>Error</h2><p>${esc(e.message)}</p><button class="btn" onclick="window.location.href='index.html'">← Volver</button></div>`;
     }
   })();
 })();

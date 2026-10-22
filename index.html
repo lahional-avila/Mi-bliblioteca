@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=18" />
+<link rel="manifest" href="manifest.json?v=19" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=18').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=19').catch(()=>{}); });
   }
 </script>
 <style>
@@ -68,8 +68,6 @@
   .icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:.16s;flex-shrink:0;box-shadow:var(--shadow-sm);}
   .icon-btn:hover{color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%, var(--border))}
   .icon-btn svg{width:var(--icon-md);height:var(--icon-md)}
-  .icon-btn.sync-ok { color: var(--ok); border-color: var(--ok); }
-  .icon-btn.sync-err { color: var(--danger); border-color: var(--danger); }
   .icon-btn.sync-loading svg { animation: spin 1s linear infinite; }
   @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
   .hero{padding:26px 0 6px}
@@ -481,20 +479,12 @@
     return res.json();
   }
 
-  // ═══ SINCRONIZAR CON GIST (merge inteligente) ═══
   async function sincronizarConGist(silencioso = false) {
-    if (!tieneSync()) {
-      if (!silencioso) toast('Configurá el sync primero');
-      return false;
-    }
-    if (syncEnProgreso) {
-      if (!silencioso) toast('Sync en progreso…');
-      return false;
-    }
+    if (!tieneSync()) { if (!silencioso) toast('Configurá el sync primero'); return false; }
+    if (syncEnProgreso) { if (!silencioso) toast('Sync en progreso…'); return false; }
     syncEnProgreso = true;
     const btn = $('#btnSync');
     btn.classList.add('sync-loading');
-    btn.classList.remove('sync-ok', 'sync-err');
 
     try {
       console.log('🔄 Sincronizando con Gist…');
@@ -502,23 +492,15 @@
       const file = gist.files && gist.files['biblioteca.json'];
 
       if (!file) {
-        console.log('📤 No hay biblioteca.json en Gist. Subiendo local…');
         await guardarBiblioteca(true);
         btn.classList.remove('sync-loading');
-        btn.classList.add('sync-ok');
         if (!silencioso) toast('✓ Biblioteca subida al Gist');
         return true;
       }
 
-      const contenido = file.truncated
-        ? await (await fetchConTimeout(file.raw_url)).text()
-        : file.content;
+      const contenido = file.truncated ? await (await fetchConTimeout(file.raw_url)).text() : file.content;
       const gistData = JSON.parse(contenido);
       const eliminados = getEliminados();
-
-      console.log(`📥 Gist tiene ${gistData.libros.length} libros, local tiene ${biblioteca.libros.length}`);
-
-      // Merge: por cada libro del Gist
       const mapaLocal = new Map(biblioteca.libros.map(l => [l.id, l]));
       let cambiosLocal = false;
 
@@ -527,69 +509,65 @@
         const local = mapaLocal.get(gistLibro.id);
 
         if (!local) {
-          // Nuevo en Gist
           biblioteca.libros.push(gistLibro);
           cambiosLocal = true;
           console.log(`  ➕ Agregado del Gist: ${gistLibro.titulo}`);
         } else {
-          // Existe en ambos: comparar
           const pLocal = Number(local.progreso) || 0;
           const pGist = Number(gistLibro.progreso) || 0;
           const fLocal = Number(local.fecha) || 0;
           const fGist = Number(gistLibro.fecha) || 0;
 
-          // Gana el que tenga más progreso, o si empatan, el más reciente
           let usarGist = false;
-          if (pGist > pLocal) {
-            usarGist = true;
-            console.log(`  📖 ${gistLibro.titulo}: Gist tiene más progreso (${pGist}% > ${pLocal}%)`);
-          } else if (pGist === pLocal && fGist > fLocal) {
-            usarGist = true;
-            console.log(`  🕐 ${gistLibro.titulo}: Gist más reciente`);
-          }
+          if (pGist > pLocal) usarGist = true;
+          else if (pGist === pLocal && fGist > fLocal) usarGist = true;
 
           if (usarGist) {
             const idx = biblioteca.libros.findIndex(l => l.id === gistLibro.id);
-            if (idx >= 0) biblioteca.libros[idx] = { ...local, ...gistLibro };
-            cambiosLocal = true;
+            if (idx >= 0) {
+              const merged = {
+                ...local,
+                ...gistLibro,
+                progreso: Math.max(pLocal, pGist),
+                fecha: Math.max(fLocal, fGist),
+                enProgreso: (local.enProgreso || gistLibro.enProgreso) || false,
+                leido: (local.leido || gistLibro.leido) || false,
+                favorito: (local.favorito || gistLibro.favorito) || false,
+              };
+              biblioteca.libros[idx] = merged;
+              cambiosLocal = true;
+            }
           }
         }
       }
 
-      // Verificar si hay locales que no están en el Gist (para subirlos)
       const mapaGist = new Map(gistData.libros.map(l => [l.id, l]));
       const hayLocalesNuevos = biblioteca.libros.some(l => !mapaGist.has(l.id) && !eliminados.includes(l.id));
 
       if (cambiosLocal) {
         localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-        console.log('✅ Biblioteca local actualizada desde Gist');
       }
-
       if (hayLocalesNuevos || cambiosLocal) {
         await guardarBiblioteca(true);
       }
 
       btn.classList.remove('sync-loading');
-      btn.classList.add('sync-ok');
       $('#sSync').textContent = '✓';
       if (!silencioso) toast('✓ Sincronizado');
       render();
       return true;
     } catch (e) {
-      console.error('❌ Sync error:', e.message);
+      console.error('Sync error:', e.message);
       btn.classList.remove('sync-loading');
-      btn.classList.add('sync-err');
       $('#sSync').textContent = '⚠';
-      if (!silencioso) toast('Error sync: ' + e.message);
+      if (!silencioso) toast('Error: ' + e.message);
       return false;
     } finally {
       syncEnProgreso = false;
     }
   }
 
-  // ═══ CARGAR BIBLIOTECA ═══
   async function cargarBiblioteca() {
-    // 1. Local primero
     try {
       const cache = localStorage.getItem(LS_CACHE_BIB);
       if (cache) {
@@ -598,19 +576,12 @@
         biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
         console.log(`📚 Local: ${biblioteca.libros.length} libros`);
       }
-    } catch (e) { console.warn('Local cache error:', e); }
+    } catch (e) { console.warn('Local error:', e); }
 
-    // 2. SIEMPRE sincronizar con Gist si está configurado
-    if (tieneSync()) {
-      await sincronizarConGist(true);
-    }
-
-    if (biblioteca.libros.length === 0) {
-      biblioteca = { version: 2, libros: [], preferencias: {} };
-    }
+    if (tieneSync()) await sincronizarConGist(true);
+    if (biblioteca.libros.length === 0) biblioteca = { version: 2, libros: [], preferencias: {} };
   }
 
-  // ═══ GUARDAR BIBLIOTECA ═══
   async function guardarBiblioteca(silencioso = false) {
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
     if (!tieneSync()) return true;
@@ -618,11 +589,11 @@
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
         files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
       });
-      console.log(`✅ Biblioteca subida al Gist (${biblioteca.libros.length} libros)`);
+      console.log(`✅ Subido al Gist (${biblioteca.libros.length} libros)`);
       if (!silencioso) toast('✓ Sincronizado');
       return true;
     } catch (e) {
-      console.warn('⚠ No se pudo subir al Gist:', e.message);
+      console.warn('Sync falló:', e.message);
       if (!silencioso) toast('⚠ Sync falló, guardado local');
       return false;
     }
@@ -642,224 +613,13 @@
     });
   }
 
-  function parsearTextoEstructurado(texto) {
-    const lineas = texto.split('\n');
-    const resultado = {
-      titulo: '', autor: '', año: '', categoria: 'general', reseña: '',
-      capitulos: [], secciones: []
-    };
-    let actual = null, subActual = null, buffer = [], enReseña = false, reseñaBuffer = [];
-
-    function flushBuffer() {
-      if (!actual) return;
-      const txt = buffer.join('\n').trim();
-      if (!txt) return;
-      if (subActual === 'resumen') actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
-      else if (subActual === 'puntos') actual.obj.puntos = (actual.obj.puntos ? actual.obj.puntos + '\n\n' : '') + txt;
-      else if (subActual === 'aplicacion') actual.obj.aplicacion = (actual.obj.aplicacion ? actual.obj.aplicacion + '\n\n' : '') + txt;
-      else if (subActual === 'enseñanza') actual.obj.enseñanza = (actual.obj.enseñanza ? actual.obj.enseñanza + '\n\n' : '') + txt;
-      else if (subActual === 'preguntas') {
-        const preguntas = txt.split(/\n+/).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
-        actual.obj.preguntas = (actual.obj.preguntas || []).concat(preguntas);
-      } else {
-        actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
-      }
-      buffer = [];
-    }
-    function flushReseña() {
-      if (enReseña && reseñaBuffer.length) resultado.reseña = reseñaBuffer.join('\n').trim();
-      enReseña = false;
-      reseñaBuffer = [];
-    }
-
-    for (let i = 0; i < lineas.length; i++) {
-      let linea = lineas[i];
-      let lineaTrim = linea.trim();
-
-      if (!resultado.titulo && /^\*\*[^*]+\*\*$/.test(lineaTrim)) {
-        const m = lineaTrim.match(/^\*\*([^*]+)\*\*$/);
-        if (m) { resultado.titulo = m[1].trim(); continue; }
-      }
-
-      const mBoldField = lineaTrim.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)$/);
-      if (mBoldField) {
-        const campo = mBoldField[1].trim();
-        const valor = mBoldField[2].trim();
-        lineaTrim = `${campo}: ${valor}`;
-      }
-
-      const mTitulo = lineaTrim.match(/^T[íi]tulo:\s*(.+)$/i);
-      const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
-      const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
-      const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
-      const mReseña = lineaTrim.match(/^(Rese[ñn]a|Resumen|Sinopsis|Descripci[oó]n)(?:\s+breve)?\s*:\s*(.*)$/i);
-
-      if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
-      if (mAutor) { resultado.autor = mAutor[1].trim(); continue; }
-      if (mAño) { resultado.año = mAño[1].trim(); continue; }
-      if (mCat) {
-        const catNorm = normalizar(mCat[1]);
-        const catEncontrada = CATEGORIAS.find(c => normalizar(c.id) === catNorm || normalizar(c.nombre) === catNorm);
-        resultado.categoria = catEncontrada ? catEncontrada.id : 'general';
-        continue;
-      }
-      if (mReseña) {
-        flushBuffer(); flushReseña();
-        enReseña = true;
-        if (mReseña[2].trim()) reseñaBuffer.push(mReseña[2].trim());
-        continue;
-      }
-
-      if (lineaTrim.startsWith('### ')) {
-        flushBuffer();
-        const sub = normalizar(lineaTrim.slice(4).trim());
-        if (/^resumen/.test(sub)) subActual = 'resumen';
-        else if (/^puntos?\s*importantes/.test(sub)) subActual = 'puntos';
-        else if (/^aplicaci[oó]n/.test(sub)) subActual = 'aplicacion';
-        else if (/^ensen|^ense[ñn]anza/.test(sub)) subActual = 'enseñanza';
-        else if (/^preguntas/.test(sub)) subActual = 'preguntas';
-        else subActual = 'resumen';
-        continue;
-      }
-
-      if (lineaTrim.startsWith('## ') || lineaTrim.startsWith('# ')) {
-        flushBuffer(); flushReseña();
-        let titulo = lineaTrim.startsWith('## ') ? lineaTrim.slice(3).trim() : lineaTrim.slice(2).trim();
-        const esParte = /^(parte|secci[oó]n|libro)\s+/i.test(titulo);
-        if (esParte) {
-          const sec = { id: uid(), titulo, capitulos: [] };
-          resultado.secciones.push(sec);
-          actual = { tipo: 'sec', obj: sec };
-          subActual = null;
-        } else {
-          const cap = { id: uid(), titulo, resumen: '', puntos: '', aplicacion: '', enseñanza: '', preguntas: [], notas: [], ttsIndice: 0, leido: false };
-          if (actual && actual.tipo === 'sec') actual.obj.capitulos.push(cap);
-          else resultado.capitulos.push(cap);
-          actual = { tipo: 'cap', obj: cap };
-          subActual = null;
-        }
-        continue;
-      }
-
-      if (enReseña) reseñaBuffer.push(linea);
-      else if (actual) buffer.push(linea);
-    }
-    flushBuffer(); flushReseña();
-    return resultado;
-  }
-
-  async function buscarPortadaAuto(titulo, autor) {
-    if (!titulo) return null;
-    const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
-    const querys = [];
-    if (autor) querys.push(`intitle:${titulo} inauthor:${autor}`);
-    querys.push(`intitle:${titulo}`);
-    for (const q of querys) {
-      try {
-        const res = await timeout(fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`), 8000);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data.items) continue;
-        for (const item of data.items) {
-          const vi = item.volumeInfo;
-          if (!vi) continue;
-          let coverUrl = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail;
-          if (!coverUrl && item.id) coverUrl = `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=2`;
-          if (!coverUrl) continue;
-          coverUrl = coverUrl.replace(/^http:/, 'https:');
-          try {
-            const imgRes = await timeout(fetch(coverUrl, { mode: 'cors' }), 6000);
-            if (!imgRes.ok) continue;
-            const blob = await imgRes.blob();
-            if (blob.type.startsWith('image/') && blob.size > 2000) return await comprimirThumbnail(blob);
-          } catch {}
-        }
-      } catch {}
-    }
-    return null;
-  }
-
-  async function comprimirThumbnail(blob, maxW = 200, quality = 0.7) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const url = URL.createObjectURL(blob);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let { width: w, height: h } = img;
-        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob((out) => resolve(out || blob), 'image/jpeg', quality);
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
-      img.src = url;
-    });
-  }
-
-  function blobToDataURL(blob) {
-    return new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result);
-      r.onerror = rej;
-      r.readAsDataURL(blob);
-    });
-  }
-
-  function elegirMejorVoz() {
-    if (!('speechSynthesis' in window)) return null;
-    const voces = window.speechSynthesis.getVoices() || [];
-    const es = voces.filter(v => /^es/i.test(v.lang));
-    const pool = es.length ? es : voces;
-    if (!pool.length) return null;
-    function puntuar(v) {
-      let p = 0;
-      const n = (v.name||'').toLowerCase(), l = (v.lang||'').toLowerCase();
-      if (l === 'es-es') p += 40; else if (l.startsWith('es-')) p += 25;
-      if (n.includes('neural') || n.includes('enhanced')) p += 40;
-      if (n.includes('siri') || n.includes('google')) p += 20;
-      return p;
-    }
-    mejorVoz = pool.map(v => ({v, p: puntuar(v)})).sort((a,b) => b.p - a.p)[0]?.v || null;
-    return mejorVoz;
-  }
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => elegirMejorVoz();
-    elegirMejorVoz();
-  }
-
-  function hablarReseña() {
-    if (!('speechSynthesis' in window)) { toast('Sin voz'); return; }
-    const texto = $('#revResena').textContent.trim();
-    if (!texto) return;
-    if (ttsActivo) {
-      window.speechSynthesis.cancel();
-      ttsActivo = false;
-      $('#revTtsBtn').classList.remove('activo');
-      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
-      return;
-    }
-    if (!mejorVoz) elegirMejorVoz();
-    const u = new SpeechSynthesisUtterance(texto);
-    u.lang = 'es-ES';
-    u.rate = 1;
-    if (mejorVoz) u.voice = mejorVoz;
-    u.onend = () => {
-      ttsActivo = false;
-      $('#revTtsBtn').classList.remove('activo');
-      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
-    };
-    try {
-      window.speechSynthesis.speak(u);
-      ttsActivo = true;
-      $('#revTtsBtn').classList.add('activo');
-      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Pausar';
-    } catch {}
-  }
-
+  // ═══ FILTRO "EN PROCESO" CORREGIDO ═══
   function libroEnProgreso(l) {
+    if (l.leido) return false;
     const p = Number(l.progreso) || 0;
-    return p > 0 && p < 100 && !l.leido;
+    if (p > 0) return true;
+    if (l.enProgreso === true) return true;
+    return false;
   }
 
   function listaFiltrada() {
@@ -918,6 +678,8 @@
       const inicial = esc(((l.titulo||'?').trim()[0]||'?').toUpperCase());
       const pct = Math.round(Number(l.progreso) || 0);
       const pctClass = pct >= 100 ? 'full' : '';
+      const displayPct = (pct === 0 && l.enProgreso && !l.leido) ? '<1%' : `${pct}%`;
+      const enProceso = libroEnProgreso(l);
       return `
         <article class="card ${l.leido ? 'read' : ''}" data-id="${l.id}" tabindex="0" role="button" style="animation-delay:${Math.min(i*20,200)}ms">
           ${l.leido ? `<div class="badge-read"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>LEÍDO</div>` : ''}
@@ -931,7 +693,7 @@
               ${l.reseña ? `<p class="resena-card">${esc(l.reseña.slice(0, 120))}${l.reseña.length > 120 ? '…' : ''}</p>` : ''}
               <div class="meta-row">
                 <span class="pill" style="background:color-mix(in srgb, ${cat.c1} 15%, transparent);color:${cat.c1};border-color:color-mix(in srgb, ${cat.c1} 40%, transparent)">${cat.nombre}</span>
-                <span class="pill pct ${pctClass}">${pct}%</span>
+                ${enProceso || pct > 0 ? `<span class="pill pct ${pctClass}">${displayPct}</span>` : ''}
                 ${l.favorito ? `<span class="pill fav">❤ Fav</span>` : ''}
               </div>
             </div>
@@ -951,9 +713,11 @@
     $('#revTitulo').textContent = l.titulo;
     $('#revAutor').textContent = l.autor || '';
     const cat = getCat(l.categoria);
+    const pct = Math.round(Number(l.progreso) || 0);
+    const displayPct = (pct === 0 && l.enProgreso && !l.leido) ? '<1%' : `${pct}%`;
     const meta = [
       `<span class="pill" style="background:color-mix(in srgb, ${cat.c1} 15%, transparent);color:${cat.c1};border-color:color-mix(in srgb, ${cat.c1} 40%, transparent)">${cat.nombre}</span>`,
-      l.leido ? `<span class="pill pct full">100%</span>` : `<span class="pill pct">${Math.round(Number(l.progreso) || 0)}%</span>`
+      l.leido ? `<span class="pill pct full">100%</span>` : `<span class="pill pct">${displayPct}</span>`
     ];
     if (l.año) meta.push(`<span class="pill">${esc(l.año)}</span>`);
     if (l.favorito) meta.push(`<span class="pill fav">❤ Fav</span>`);
@@ -1046,7 +810,8 @@
         id: nuevoId, titulo: parsed.titulo || 'Sin título', autor: parsed.autor || '',
         año: parsed.año || '', categoria: parsed.categoria || 'general',
         reseña: parsed.reseña || '', thumbnail: thumbnail,
-        leido: false, favorito: false, puntos: 0, fecha: Date.now(), progreso: 0
+        leido: false, favorito: false, puntos: 0, fecha: Date.now(), progreso: 0,
+        enProgreso: false
       };
       localStorage.setItem(`libro-${nuevoId}.json`, JSON.stringify(contenidoLibro));
       biblioteca.libros.push(entrada);
@@ -1094,9 +859,201 @@
       try {
         await eliminarLibroDeGist(l.id);
         await guardarBiblioteca(true);
-        toast('✓ Eliminado del Gist');
       } catch (e) { toast('⚠ Local OK, Gist falló'); }
     }
+  }
+
+  // ... parsearTextoEstructurado, buscarPortadaAuto, comprimirThumbnail, blobToDataURL, elegirMejorVoz, hablarReseña (idénticos a v18) ...
+  function parsearTextoEstructurado(texto) {
+    const lineas = texto.split('\n');
+    const resultado = { titulo: '', autor: '', año: '', categoria: 'general', reseña: '', capitulos: [], secciones: [] };
+    let actual = null, subActual = null, buffer = [], enReseña = false, reseñaBuffer = [];
+    function flushBuffer() {
+      if (!actual) return;
+      const txt = buffer.join('\n').trim();
+      if (!txt) return;
+      if (subActual === 'resumen') actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
+      else if (subActual === 'puntos') actual.obj.puntos = (actual.obj.puntos ? actual.obj.puntos + '\n\n' : '') + txt;
+      else if (subActual === 'aplicacion') actual.obj.aplicacion = (actual.obj.aplicacion ? actual.obj.aplicacion + '\n\n' : '') + txt;
+      else if (subActual === 'enseñanza') actual.obj.enseñanza = (actual.obj.enseñanza ? actual.obj.enseñanza + '\n\n' : '') + txt;
+      else if (subActual === 'preguntas') {
+        const preguntas = txt.split(/\n+/).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+        actual.obj.preguntas = (actual.obj.preguntas || []).concat(preguntas);
+      } else actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
+      buffer = [];
+    }
+    function flushReseña() {
+      if (enReseña && reseñaBuffer.length) resultado.reseña = reseñaBuffer.join('\n').trim();
+      enReseña = false; reseñaBuffer = [];
+    }
+    for (let i = 0; i < lineas.length; i++) {
+      let linea = lineas[i]; let lineaTrim = linea.trim();
+      if (!resultado.titulo && /^\*\*[^*]+\*\*$/.test(lineaTrim)) {
+        const m = lineaTrim.match(/^\*\*([^*]+)\*\*$/);
+        if (m) { resultado.titulo = m[1].trim(); continue; }
+      }
+      const mBoldField = lineaTrim.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)$/);
+      if (mBoldField) {
+        const campo = mBoldField[1].trim(); const valor = mBoldField[2].trim();
+        lineaTrim = `${campo}: ${valor}`;
+      }
+      const mTitulo = lineaTrim.match(/^T[íi]tulo:\s*(.+)$/i);
+      const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
+      const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
+      const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
+      const mReseña = lineaTrim.match(/^(Rese[ñn]a|Resumen|Sinopsis|Descripci[oó]n)(?:\s+breve)?\s*:\s*(.*)$/i);
+      if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
+      if (mAutor) { resultado.autor = mAutor[1].trim(); continue; }
+      if (mAño) { resultado.año = mAño[1].trim(); continue; }
+      if (mCat) {
+        const catNorm = normalizar(mCat[1]);
+        const catEncontrada = CATEGORIAS.find(c => normalizar(c.id) === catNorm || normalizar(c.nombre) === catNorm);
+        resultado.categoria = catEncontrada ? catEncontrada.id : 'general';
+        continue;
+      }
+      if (mReseña) {
+        flushBuffer(); flushReseña(); enReseña = true;
+        if (mReseña[2].trim()) reseñaBuffer.push(mReseña[2].trim());
+        continue;
+      }
+      if (lineaTrim.startsWith('### ')) {
+        flushBuffer();
+        const sub = normalizar(lineaTrim.slice(4).trim());
+        if (/^resumen/.test(sub)) subActual = 'resumen';
+        else if (/^puntos?\s*importantes/.test(sub)) subActual = 'puntos';
+        else if (/^aplicaci[oó]n/.test(sub)) subActual = 'aplicacion';
+        else if (/^ensen|^ense[ñn]anza/.test(sub)) subActual = 'enseñanza';
+        else if (/^preguntas/.test(sub)) subActual = 'preguntas';
+        else subActual = 'resumen';
+        continue;
+      }
+      if (lineaTrim.startsWith('## ') || lineaTrim.startsWith('# ')) {
+        flushBuffer(); flushReseña();
+        let titulo = lineaTrim.startsWith('## ') ? lineaTrim.slice(3).trim() : lineaTrim.slice(2).trim();
+        const esParte = /^(parte|secci[oó]n|libro)\s+/i.test(titulo);
+        if (esParte) {
+          const sec = { id: uid(), titulo, capitulos: [] };
+          resultado.secciones.push(sec);
+          actual = { tipo: 'sec', obj: sec }; subActual = null;
+        } else {
+          const cap = { id: uid(), titulo, resumen: '', puntos: '', aplicacion: '', enseñanza: '', preguntas: [], notas: [], ttsIndice: 0, leido: false };
+          if (actual && actual.tipo === 'sec') actual.obj.capitulos.push(cap);
+          else resultado.capitulos.push(cap);
+          actual = { tipo: 'cap', obj: cap }; subActual = null;
+        }
+        continue;
+      }
+      if (enReseña) reseñaBuffer.push(linea);
+      else if (actual) buffer.push(linea);
+    }
+    flushBuffer(); flushReseña();
+    return resultado;
+  }
+
+  async function buscarPortadaAuto(titulo, autor) {
+    if (!titulo) return null;
+    const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
+    const querys = [];
+    if (autor) querys.push(`intitle:${titulo} inauthor:${autor}`);
+    querys.push(`intitle:${titulo}`);
+    for (const q of querys) {
+      try {
+        const res = await timeout(fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`), 8000);
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!data.items) continue;
+        for (const item of data.items) {
+          const vi = item.volumeInfo;
+          if (!vi) continue;
+          let coverUrl = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail;
+          if (!coverUrl && item.id) coverUrl = `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=2`;
+          if (!coverUrl) continue;
+          coverUrl = coverUrl.replace(/^http:/, 'https:');
+          try {
+            const imgRes = await timeout(fetch(coverUrl, { mode: 'cors' }), 6000);
+            if (!imgRes.ok) continue;
+            const blob = await imgRes.blob();
+            if (blob.type.startsWith('image/') && blob.size > 2000) return await comprimirThumbnail(blob);
+          } catch {}
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  async function comprimirThumbnail(blob, maxW = 200, quality = 0.7) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width: w, height: h } = img;
+        if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob((out) => resolve(out || blob), 'image/jpeg', quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
+      img.src = url;
+    });
+  }
+
+  function blobToDataURL(blob) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+  }
+
+  function elegirMejorVoz() {
+    if (!('speechSynthesis' in window)) return null;
+    const voces = window.speechSynthesis.getVoices() || [];
+    const es = voces.filter(v => /^es/i.test(v.lang));
+    const pool = es.length ? es : voces;
+    if (!pool.length) return null;
+    function puntuar(v) {
+      let p = 0;
+      const n = (v.name||'').toLowerCase(), l = (v.lang||'').toLowerCase();
+      if (l === 'es-es') p += 40; else if (l.startsWith('es-')) p += 25;
+      if (n.includes('neural') || n.includes('enhanced')) p += 40;
+      if (n.includes('siri') || n.includes('google')) p += 20;
+      return p;
+    }
+    mejorVoz = pool.map(v => ({v, p: puntuar(v)})).sort((a,b) => b.p - a.p)[0]?.v || null;
+    return mejorVoz;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => elegirMejorVoz();
+    elegirMejorVoz();
+  }
+
+  function hablarReseña() {
+    if (!('speechSynthesis' in window)) { toast('Sin voz'); return; }
+    const texto = $('#revResena').textContent.trim();
+    if (!texto) return;
+    if (ttsActivo) {
+      window.speechSynthesis.cancel(); ttsActivo = false;
+      $('#revTtsBtn').classList.remove('activo');
+      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
+      return;
+    }
+    if (!mejorVoz) elegirMejorVoz();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = 'es-ES'; u.rate = 1;
+    if (mejorVoz) u.voice = mejorVoz;
+    u.onend = () => {
+      ttsActivo = false; $('#revTtsBtn').classList.remove('activo');
+      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> Escuchar';
+    };
+    try {
+      window.speechSynthesis.speak(u);
+      ttsActivo = true;
+      $('#revTtsBtn').classList.add('activo');
+      $('#revTtsBtn').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg> Pausar';
+    } catch {}
   }
 
   /* ═══ EVENTOS ═══ */
@@ -1112,12 +1069,8 @@
     abrirReview(card.dataset.id);
   });
 
-  $('#busqueda').addEventListener('input', () => {
-    clearTimeout(busquedaTimer);
-    busquedaTimer = setTimeout(render, 180);
-  });
+  $('#busqueda').addEventListener('input', () => { clearTimeout(busquedaTimer); busquedaTimer = setTimeout(render, 180); });
   $('#orden').addEventListener('change', render);
-
   $('#chips').addEventListener('click', (e) => {
     const chip = e.target.closest('.chip');
     if (!chip) return;
@@ -1133,7 +1086,6 @@
     localStorage.setItem('tema', t);
     actualizarIconoTema();
   });
-
   function actualizarIconoTema() {
     const dark = document.documentElement.dataset.theme === 'dark';
     $('#iconSun').style.display = dark ? 'none' : '';
@@ -1154,7 +1106,6 @@
   });
 
   $('#btnAdd').addEventListener('click', abrirAdd);
-
   $('#revCerrar').addEventListener('click', () => {
     if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
     $('#reviewModal').close();
@@ -1240,8 +1191,7 @@
   });
   $('#btnProbarSync').addEventListener('click', async () => {
     const st = $('#syncStatus');
-    st.className = 'sync-status info';
-    st.textContent = 'Probando…';
+    st.className = 'sync-status info'; st.textContent = 'Probando…';
     try {
       localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
       localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
@@ -1254,25 +1204,18 @@
     }
   });
 
-  // Al volver desde el lector, sincronizar para ver cambios
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && tieneSync()) {
-      console.log('👀 Página visible, sincronizando…');
-      sincronizarConGist(true).then(() => render());
-    }
+    if (!document.hidden && tieneSync()) sincronizarConGist(true).then(() => render());
   });
-
   window.addEventListener('focus', () => {
-    if (tieneSync()) {
-      sincronizarConGist(true).then(() => render());
-    }
+    if (tieneSync()) sincronizarConGist(true).then(() => render());
   });
 
   (async function init() {
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v18 cargado');
+    console.log('✅ index.html v19 cargado');
   })();
 })();
 </script>

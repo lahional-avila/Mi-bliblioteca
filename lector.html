@@ -150,8 +150,6 @@
     box-shadow:none;
     border:none;
   }
-  /* IMPORTANTE: no bloquear break-inside en .chapter completo
-     (permite que capítulos largos se dividan entre columnas) */
   body.book-mode .chapter-divider,
   body.book-mode .book-cover-hero{ break-inside:avoid; }
   body.book-mode .chapter-title,
@@ -450,11 +448,23 @@
     return res.json();
   }
 
-  // ═══ CARGAR DATOS: LOCAL SIEMPRE PRIMERO ═══
+  function calcularProgresoLibro(l) {
+    if (!l) return 0;
+    const caps = [...(l.capitulos||[]), ...(l.secciones||[]).flatMap(s => s.capitulos||[])];
+    let suma = 0, total = 0;
+    for (const c of caps) {
+      if (!c.fragmentosPlanos) continue;
+      total += c.fragmentosPlanos.length;
+      suma += Math.min(c.ttsIndice || 0, c.fragmentosPlanos.length);
+    }
+    return total > 0 ? Math.round((suma / total) * 100) : 0;
+  }
+
+  // ═══ CARGAR DATOS: SIEMPRE SINCRONIZAR CON GIST ═══
   async function cargarDatos() {
     if (!libroId) throw new Error('No libro');
 
-    // Cargar de local
+    // 1. Cargar local primero
     try {
       const localLibro = localStorage.getItem(`libro-${libroId}.json`);
       if (localLibro) { libro = JSON.parse(localLibro); libro.id = libroId; }
@@ -468,34 +478,55 @@
       }
     } catch (e) { console.warn('local bib:', e); }
 
-    // Fallback Gist SOLO si falta algo
-    if ((!libro || !entradaBiblioteca) && getToken() && getGistId()) {
+    // 2. SIEMPRE traer del Gist si hay sync (para tener la versión más reciente)
+    if (getToken() && getGistId()) {
       try {
+        console.log('🔄 Lector: sincronizando con Gist…');
         const gist = await ghRequest('GET', `/gists/${getGistId()}`);
-        if (!biblioteca) {
-          const bibFile = gist.files && gist.files['biblioteca.json'];
-          if (bibFile) {
-            const c = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
-            biblioteca = JSON.parse(c);
-            localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+
+        // Actualizar biblioteca (con progreso)
+        const bibFile = gist.files && gist.files['biblioteca.json'];
+        if (bibFile) {
+          const c = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
+          const gistBib = JSON.parse(c);
+          const gistEntrada = gistBib.libros.find(l => l.id === libroId);
+          if (gistEntrada) {
+            const pLocal = entradaBiblioteca ? (Number(entradaBiblioteca.progreso) || 0) : 0;
+            const pGist = Number(gistEntrada.progreso) || 0;
+            if (!entradaBiblioteca || pGist >= pLocal) {
+              entradaBiblioteca = gistEntrada;
+              biblioteca = gistBib;
+              localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+              console.log(`📥 Biblioteca actualizada del Gist (progreso ${pGist}%)`);
+            }
           }
         }
-        if (biblioteca && !entradaBiblioteca) entradaBiblioteca = biblioteca.libros.find(l => l.id === libroId);
-        if (!libro) {
-          const libFile = gist.files && gist.files[`libro-${libroId}.json`];
-          if (libFile) {
-            const c = libFile.truncated ? await (await fetchConTimeout(libFile.raw_url)).text() : libFile.content;
-            libro = JSON.parse(c); libro.id = libroId;
+
+        // Actualizar libro (con ttsIndice de cada capítulo)
+        const libFile = gist.files && gist.files[`libro-${libroId}.json`];
+        if (libFile) {
+          const c = libFile.truncated ? await (await fetchConTimeout(libFile.raw_url)).text() : libFile.content;
+          const gistLibro = JSON.parse(c);
+          gistLibro.id = libroId;
+
+          const totalLocal = libro ? calcularProgresoLibro(libro) : 0;
+          const totalGist = calcularProgresoLibro(gistLibro);
+          if (!libro || totalGist >= totalLocal) {
+            libro = gistLibro;
             localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
+            console.log(`📥 Libro actualizado del Gist (progreso ${totalGist}%)`);
+          } else {
+            console.log(`📖 Libro local tiene más progreso (${totalLocal}% > ${totalGist}%), manteniendo local`);
           }
         }
-      } catch (e) { console.warn('Gist:', e.message); }
+      } catch (e) {
+        console.warn('Gist sync en lector:', e.message);
+      }
     }
 
     if (!libro) throw new Error('Libro no encontrado');
     if (!biblioteca) biblioteca = { version: 2, libros: [], preferencias: {} };
     if (!entradaBiblioteca) {
-      // Crear entrada mínima si falta
       entradaBiblioteca = { id: libroId, titulo: 'Libro', autor: '', progreso: 0, leido: false, favorito: false };
       biblioteca.libros.push(entradaBiblioteca);
     }
@@ -603,7 +634,6 @@
     page.innerHTML = html;
     actualizarProgreso();
 
-    // Asegurar que los botones "Reanudar" estén presentes en capítulos con progreso
     setTimeout(() => {
       const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
       todosCaps.forEach(c => {
@@ -829,14 +859,12 @@
     }
     if (!mejorVoz) elegirVoz();
 
-    // Marcar el fragmento ACTUAL en el capítulo antes de hablar
     if (capTTSActual) {
       destacarFragmento(capTTSActual, ttsIdx);
       const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
       const cap = todosCaps.find(c => c.id === capTTSActual);
       if (cap) cap.ttsIndice = ttsIdx;
       actualizarBotonReanudar(capTTSActual);
-      // Guardar inmediatamente (no debounce) al iniciar cada fragmento
       guardarProgreso();
     }
 
@@ -847,7 +875,6 @@
 
     u.onend = () => {
       if (gen !== ttsGen) return;
-      // Avanzar y guardar
       if (capTTSActual) {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
         const cap = todosCaps.find(c => c.id === capTTSActual);
@@ -867,7 +894,7 @@
     catch { pararTTS(); }
   }
 
-  // ═══ GUARDAR PROGRESO: robusto, escribe directo ═══
+  // ═══ GUARDAR PROGRESO: local inmediato + Gist debounce 800ms ═══
   function guardarProgreso() {
     if (!libro) return;
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -879,33 +906,37 @@
     }
     const pct = totalFrags > 0 ? Math.round((sumaFrags / totalFrags) * 100) : 0;
 
-    // Actualizar directo en el array
+    // Actualizar biblioteca con fecha nueva
     if (biblioteca) {
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) {
         biblioteca.libros[idx].progreso = pct;
+        biblioteca.libros[idx].fecha = Date.now();
       } else if (entradaBiblioteca) {
         entradaBiblioteca.progreso = pct;
+        entradaBiblioteca.fecha = Date.now();
         biblioteca.libros.push(entradaBiblioteca);
       }
     }
-    if (entradaBiblioteca) entradaBiblioteca.progreso = pct;
+    if (entradaBiblioteca) {
+      entradaBiblioteca.progreso = pct;
+      entradaBiblioteca.fecha = Date.now();
+    }
 
-    // Persistir en localStorage (síncrono)
+    // Persistir local
     try {
       localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
       localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
       console.log(`💾 Guardado: ${pct}% (${sumaFrags}/${totalFrags} frags)`);
     } catch (e) {
       console.error('❌ localStorage save error:', e);
-      toast('⚠ No se pudo guardar localmente');
     }
 
     actualizarProgreso();
 
-    // Gist con debounce largo
+    // Gist con debounce corto (800ms) para no saturar
     clearTimeout(window._gistTimer);
-    window._gistTimer = setTimeout(guardarEnGistDebounced, 3000);
+    window._gistTimer = setTimeout(guardarEnGistDebounced, 800);
   }
 
   async function guardarEnGistDebounced() {
@@ -917,7 +948,8 @@
           'biblioteca.json': { content: JSON.stringify(biblioteca) }
         }
       });
-    } catch (e) { console.warn('Gist:', e.message); }
+      console.log('✅ Progreso subido al Gist');
+    } catch (e) { console.warn('⚠ Gist save:', e.message); }
   }
 
   function actualizarProgreso() {
@@ -928,9 +960,10 @@
   async function toggleFav() {
     if (!entradaBiblioteca) return;
     entradaBiblioteca.favorito = !entradaBiblioteca.favorito;
+    entradaBiblioteca.fecha = Date.now();
     if (biblioteca) {
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
-      if (idx >= 0) biblioteca.libros[idx].favorito = entradaBiblioteca.favorito;
+      if (idx >= 0) { biblioteca.libros[idx].favorito = entradaBiblioteca.favorito; biblioteca.libros[idx].fecha = Date.now(); }
     }
     localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
     renderHeader();
@@ -944,6 +977,7 @@
     if (!entradaBiblioteca) return;
     entradaBiblioteca.leido = !entradaBiblioteca.leido;
     if (entradaBiblioteca.leido) entradaBiblioteca.progreso = 100;
+    entradaBiblioteca.fecha = Date.now();
     if (biblioteca) {
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) biblioteca.libros[idx] = { ...entradaBiblioteca };
@@ -1013,7 +1047,7 @@
     guardarProgreso();
   }
 
-  // ═══ PASO DE PÁGINA CORRECTO ═══
+  // ═══ PASO DE PÁGINA ═══
   function getScrollStep() {
     const view = $('#book-view');
     if (!view) return 0;
@@ -1025,16 +1059,11 @@
     return (colW + gap) * colsVisible;
   }
 
-  // ═══ MODO LIBRO ═══
   function applyBookMode() {
     const view = $('#book-view');
     const page = $('#book-page');
     if (!view || !page) return;
-
-    if (!bookMode) {
-      page.style.cssText = '';
-      return;
-    }
+    if (!bookMode) { page.style.cssText = ''; return; }
 
     const vw = view.clientWidth;
     const vh = view.clientHeight;
@@ -1044,7 +1073,6 @@
     const colsVisible = isMobile ? 1 : 2;
     const colW = Math.floor((vw - padding * 2 - gap * (colsVisible - 1)) / colsVisible);
 
-    // Medir con una sola columna del ancho de colW
     page.style.cssText = `
       width: ${colW}px;
       height: auto;
@@ -1130,7 +1158,6 @@
       if (ttsActivo && !ttsPausado) {
         try { window.speechSynthesis.pause(); } catch {}
         ttsPausado = true;
-        // Guardar INMEDIATAMENTE al pausar
         guardarProgreso();
         if (capTTSActual) actualizarBotonReanudar(capTTSActual);
       } else if (ttsPausado) {
@@ -1142,7 +1169,6 @@
 
     const stopBtn = e.target.closest('[data-tts-stop]');
     if (stopBtn) {
-      // Guardar INMEDIATAMENTE al detener
       if (capTTSActual) {
         guardarProgreso();
         const capId = capTTSActual;
@@ -1185,7 +1211,6 @@
     input.value = '';
   });
 
-  /* ═══ TEMAS ═══ */
   const THEMES = ['light', 'dark', 'sepia', 'parchment'];
   let currentTheme = localStorage.getItem('lector-theme') || 'light';
 
@@ -1240,10 +1265,21 @@
   });
 
   $('#btnBack').addEventListener('click', async () => {
-    // Guardar ANTES de parar
     guardarProgreso();
+    // Forzar guardado al Gist antes de salir
+    if (getToken() && getGistId()) {
+      clearTimeout(window._gistTimer);
+      try {
+        await ghRequest('PATCH', `/gists/${getGistId()}`, {
+          files: {
+            [`libro-${libroId}.json`]: { content: JSON.stringify(libro) },
+            'biblioteca.json': { content: JSON.stringify(biblioteca) }
+          }
+        });
+        console.log('✅ Progreso final subido al Gist');
+      } catch (e) { console.warn('⚠ Gist final:', e.message); }
+    }
     pararTTS();
-    // Esperar un momento para asegurar localStorage
     await new Promise(r => setTimeout(r, 100));
     window.location.href = 'index.html';
   });
@@ -1256,10 +1292,8 @@
   });
 
   window.addEventListener('pagehide', () => {
-    // Guardar siempre (aunque no esté activo, por si acaso)
     try { guardarProgreso(); } catch(e) {}
   });
-
   window.addEventListener('beforeunload', () => {
     try { guardarProgreso(); } catch(e) {}
   });
@@ -1270,9 +1304,8 @@
       renderHeader();
       renderTOC();
       renderContenido();
-      console.log('✅ lector.html v17 cargado. Progreso guardado:', entradaBiblioteca?.progreso);
+      console.log('✅ lector.html v18 cargado. Progreso:', entradaBiblioteca?.progreso);
 
-      // Auto-scroll al capítulo con progreso
       setTimeout(() => {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
         const capActivo = todosCaps.find(c => (c.ttsIndice || 0) > 0);

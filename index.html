@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=17" />
+<link rel="manifest" href="manifest.json?v=18" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=17').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=18').catch(()=>{}); });
   }
 </script>
 <style>
@@ -68,6 +68,10 @@
   .icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center;transition:.16s;flex-shrink:0;box-shadow:var(--shadow-sm);}
   .icon-btn:hover{color:var(--text);border-color:color-mix(in srgb,var(--accent) 40%, var(--border))}
   .icon-btn svg{width:var(--icon-md);height:var(--icon-md)}
+  .icon-btn.sync-ok { color: var(--ok); border-color: var(--ok); }
+  .icon-btn.sync-err { color: var(--danger); border-color: var(--danger); }
+  .icon-btn.sync-loading svg { animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
   .hero{padding:26px 0 6px}
   .hero-title{margin:0;font-size:clamp(1.5rem,4.4vw,2.3rem);line-height:1.15;letter-spacing:-.03em;font-weight:800}
   .grad{background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -222,7 +226,7 @@
         <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <button class="icon-btn" id="btnSync" title="Configurar sync" aria-label="Sync">
+      <button class="icon-btn" id="btnSync" title="Sincronizar ahora" aria-label="Sincronizar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/>
         </svg>
@@ -395,6 +399,7 @@
   let mejorVoz = null;
   let parsedPreview = null;
   let coverBlob = null;
+  let syncEnProgreso = false;
 
   const CATEGORIAS = [
     { id:'general', nombre:'General', c1:'#6366f1', c2:'#8b5cf6' },
@@ -476,42 +481,136 @@
     return res.json();
   }
 
-  // ═══ CARGAR BIBLIOTECA: LOCAL PRIMERO ═══
+  // ═══ SINCRONIZAR CON GIST (merge inteligente) ═══
+  async function sincronizarConGist(silencioso = false) {
+    if (!tieneSync()) {
+      if (!silencioso) toast('Configurá el sync primero');
+      return false;
+    }
+    if (syncEnProgreso) {
+      if (!silencioso) toast('Sync en progreso…');
+      return false;
+    }
+    syncEnProgreso = true;
+    const btn = $('#btnSync');
+    btn.classList.add('sync-loading');
+    btn.classList.remove('sync-ok', 'sync-err');
+
+    try {
+      console.log('🔄 Sincronizando con Gist…');
+      const gist = await ghRequest('GET', `/gists/${getGistId()}`);
+      const file = gist.files && gist.files['biblioteca.json'];
+
+      if (!file) {
+        console.log('📤 No hay biblioteca.json en Gist. Subiendo local…');
+        await guardarBiblioteca(true);
+        btn.classList.remove('sync-loading');
+        btn.classList.add('sync-ok');
+        if (!silencioso) toast('✓ Biblioteca subida al Gist');
+        return true;
+      }
+
+      const contenido = file.truncated
+        ? await (await fetchConTimeout(file.raw_url)).text()
+        : file.content;
+      const gistData = JSON.parse(contenido);
+      const eliminados = getEliminados();
+
+      console.log(`📥 Gist tiene ${gistData.libros.length} libros, local tiene ${biblioteca.libros.length}`);
+
+      // Merge: por cada libro del Gist
+      const mapaLocal = new Map(biblioteca.libros.map(l => [l.id, l]));
+      let cambiosLocal = false;
+
+      for (const gistLibro of gistData.libros) {
+        if (eliminados.includes(gistLibro.id)) continue;
+        const local = mapaLocal.get(gistLibro.id);
+
+        if (!local) {
+          // Nuevo en Gist
+          biblioteca.libros.push(gistLibro);
+          cambiosLocal = true;
+          console.log(`  ➕ Agregado del Gist: ${gistLibro.titulo}`);
+        } else {
+          // Existe en ambos: comparar
+          const pLocal = Number(local.progreso) || 0;
+          const pGist = Number(gistLibro.progreso) || 0;
+          const fLocal = Number(local.fecha) || 0;
+          const fGist = Number(gistLibro.fecha) || 0;
+
+          // Gana el que tenga más progreso, o si empatan, el más reciente
+          let usarGist = false;
+          if (pGist > pLocal) {
+            usarGist = true;
+            console.log(`  📖 ${gistLibro.titulo}: Gist tiene más progreso (${pGist}% > ${pLocal}%)`);
+          } else if (pGist === pLocal && fGist > fLocal) {
+            usarGist = true;
+            console.log(`  🕐 ${gistLibro.titulo}: Gist más reciente`);
+          }
+
+          if (usarGist) {
+            const idx = biblioteca.libros.findIndex(l => l.id === gistLibro.id);
+            if (idx >= 0) biblioteca.libros[idx] = { ...local, ...gistLibro };
+            cambiosLocal = true;
+          }
+        }
+      }
+
+      // Verificar si hay locales que no están en el Gist (para subirlos)
+      const mapaGist = new Map(gistData.libros.map(l => [l.id, l]));
+      const hayLocalesNuevos = biblioteca.libros.some(l => !mapaGist.has(l.id) && !eliminados.includes(l.id));
+
+      if (cambiosLocal) {
+        localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+        console.log('✅ Biblioteca local actualizada desde Gist');
+      }
+
+      if (hayLocalesNuevos || cambiosLocal) {
+        await guardarBiblioteca(true);
+      }
+
+      btn.classList.remove('sync-loading');
+      btn.classList.add('sync-ok');
+      $('#sSync').textContent = '✓';
+      if (!silencioso) toast('✓ Sincronizado');
+      render();
+      return true;
+    } catch (e) {
+      console.error('❌ Sync error:', e.message);
+      btn.classList.remove('sync-loading');
+      btn.classList.add('sync-err');
+      $('#sSync').textContent = '⚠';
+      if (!silencioso) toast('Error sync: ' + e.message);
+      return false;
+    } finally {
+      syncEnProgreso = false;
+    }
+  }
+
+  // ═══ CARGAR BIBLIOTECA ═══
   async function cargarBiblioteca() {
+    // 1. Local primero
     try {
       const cache = localStorage.getItem(LS_CACHE_BIB);
       if (cache) {
         biblioteca = JSON.parse(cache);
         const eliminados = getEliminados();
         biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
-        $('#sSync').textContent = tieneSync() ? '✓' : '—';
-        console.log(`📚 Cargados ${biblioteca.libros.length} libros del local`);
+        console.log(`📚 Local: ${biblioteca.libros.length} libros`);
       }
     } catch (e) { console.warn('Local cache error:', e); }
 
-    if (biblioteca.libros.length === 0 && tieneSync()) {
-      try {
-        const gist = await ghRequest('GET', `/gists/${getGistId()}`);
-        const file = gist.files && gist.files['biblioteca.json'];
-        if (file) {
-          const contenido = file.truncated
-            ? await (await fetchConTimeout(file.raw_url)).text()
-            : file.content;
-          biblioteca = JSON.parse(contenido);
-          const eliminados = getEliminados();
-          biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
-          localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-          $('#sSync').textContent = '✓';
-        }
-      } catch (e) { console.warn('Gist load:', e.message); }
+    // 2. SIEMPRE sincronizar con Gist si está configurado
+    if (tieneSync()) {
+      await sincronizarConGist(true);
     }
 
     if (biblioteca.libros.length === 0) {
       biblioteca = { version: 2, libros: [], preferencias: {} };
-      $('#sSync').textContent = tieneSync() ? '⚠' : '—';
     }
   }
 
+  // ═══ GUARDAR BIBLIOTECA ═══
   async function guardarBiblioteca(silencioso = false) {
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
     if (!tieneSync()) return true;
@@ -519,11 +618,11 @@
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
         files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
       });
-      $('#sSync').textContent = '✓';
+      console.log(`✅ Biblioteca subida al Gist (${biblioteca.libros.length} libros)`);
       if (!silencioso) toast('✓ Sincronizado');
       return true;
     } catch (e) {
-      $('#sSync').textContent = '⚠';
+      console.warn('⚠ No se pudo subir al Gist:', e.message);
       if (!silencioso) toast('⚠ Sync falló, guardado local');
       return false;
     }
@@ -974,6 +1073,7 @@
     if (nuevoAutor === null) return;
     l.titulo = nuevoTitulo.trim() || l.titulo;
     l.autor = nuevoAutor.trim();
+    l.fecha = Date.now();
     await guardarBiblioteca();
     abrirReview(l.id);
     render();
@@ -1041,14 +1141,19 @@
   }
   actualizarIconoTema();
 
-  $('#btnAdd').addEventListener('click', abrirAdd);
-  $('#btnSync').addEventListener('click', () => {
-    $('#syncToken').value = getToken();
-    $('#syncGistId').value = getGistId();
-    $('#syncStatus').className = 'sync-status';
-    $('#syncStatus').textContent = '';
-    $('#syncModal').showModal();
+  $('#btnSync').addEventListener('click', async () => {
+    if (!tieneSync()) {
+      $('#syncToken').value = getToken();
+      $('#syncGistId').value = getGistId();
+      $('#syncStatus').className = 'sync-status';
+      $('#syncStatus').textContent = '';
+      $('#syncModal').showModal();
+      return;
+    }
+    await sincronizarConGist(false);
   });
+
+  $('#btnAdd').addEventListener('click', abrirAdd);
 
   $('#revCerrar').addEventListener('click', () => {
     if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; }
@@ -1122,8 +1227,7 @@
     localStorage.setItem(SYNC_GIST_KEY, $('#syncGistId').value.trim());
     toast('✓ Guardado');
     $('#syncModal').close();
-    await cargarBiblioteca();
-    render();
+    await sincronizarConGist(false);
   });
   $('#btnBorrarSync').addEventListener('click', () => {
     if (!confirm('¿Borrar config de sync?')) return;
@@ -1150,11 +1254,25 @@
     }
   });
 
+  // Al volver desde el lector, sincronizar para ver cambios
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && tieneSync()) {
+      console.log('👀 Página visible, sincronizando…');
+      sincronizarConGist(true).then(() => render());
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (tieneSync()) {
+      sincronizarConGist(true).then(() => render());
+    }
+  });
+
   (async function init() {
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v17 cargado');
+    console.log('✅ index.html v18 cargado');
   })();
 })();
 </script>

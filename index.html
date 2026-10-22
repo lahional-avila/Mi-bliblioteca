@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=21" />
+<link rel="manifest" href="manifest.json?v=22" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=21').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=22').catch(()=>{}); });
   }
 </script>
 <style>
@@ -320,36 +320,27 @@
       </button>
     </header>
     <div class="modal-body">
-      <div class="hint" style="padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);line-height:1.6">
-        <strong>📖 Carga automática:</strong> al hacer clic en <strong>"Seleccionar libro"</strong>, se abre el explorador.
-        Elegí la <strong>carpeta del libro</strong> (donde está el <code>.txt</code> y el <code>Cover.jpg</code>).
-        Se cargará todo automáticamente.
-        <br><br>
-        <span style="color:var(--muted);font-size:.75rem">⚠️ Por seguridad, los navegadores no permiten leer archivos hermanos de un archivo seleccionado. La carpeta es la única forma de hacerlo automático.</span>
+      <div class="hint" style="padding:14px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);line-height:1.6">
+        <strong>📖 Cargar libro</strong><br>
+        Hacé clic en <strong>"Seleccionar carpeta del libro"</strong> y elegí la carpeta que contiene:<br>
+        • <code>Resumen.txt</code> (obligatorio)<br>
+        • <code>Cover.jpg</code> (opcional, portada)<br>
+        Se cargan automáticamente al abrir.
       </div>
 
       <div class="field">
-        <label>Cargar libro</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-          <button type="button" class="btn btn-primary" id="btnSelectFolder" style="flex:1">📖 Seleccionar libro (auto-portada)</button>
-          <button type="button" class="btn btn-ghost" id="btnSelectFile" style="flex:1">📄 Solo el TXT (sin portada)</button>
-        </div>
-        <div id="fileInfo" style="font-size:.85rem;color:var(--muted);min-height:1.2em;"></div>
-        <input type="file" id="addArchivo" accept=".txt,text/plain" multiple style="display:none" />
+        <button type="button" class="btn btn-primary" id="btnSelectFolder" style="width:100%;padding:14px;font-size:1rem">📁 Seleccionar carpeta del libro</button>
+        <div id="fileInfo" style="font-size:.85rem;color:var(--muted);min-height:1.2em;margin-top:8px;"></div>
         <input type="file" id="addDir" webkitdirectory style="display:none" />
       </div>
 
       <div class="field">
         <label for="addTexto">Texto completo del libro</label>
-        <textarea id="addTexto" placeholder="Pegá el texto aquí si no subís un archivo..." style="min-height:150px"></textarea>
+        <textarea id="addTexto" placeholder="El texto se cargará automáticamente al seleccionar la carpeta…" style="min-height:150px"></textarea>
       </div>
 
       <div class="field">
-        <label>Portada (si no se cargó auto)</label>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-          <button type="button" class="btn btn-ghost btn-sm" id="addBuscarPortada">🔍 Buscar en Google</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="btnPegarPortada">📋 Pegar del Portapapeles</button>
-        </div>
+        <label>Portada</label>
         <div id="addCoverPreview" style="display:none; width:100px; height:140px; border-radius:6px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,.2);">
           <img src="" style="width:100%; height:100%; object-fit:cover;">
         </div>
@@ -489,6 +480,7 @@
     return res.json();
   }
 
+  // ═══ SYNC CON MERGE DE ELIMINADOS ═══
   async function sincronizarConGist(silencioso = false) {
     if (!tieneSync()) { if (!silencioso) toast('Configurá el sync primero'); return false; }
     if (syncEnProgreso) { if (!silencioso) toast('Sync en progreso…'); return false; }
@@ -497,58 +489,79 @@
     btn.classList.add('sync-loading');
 
     try {
+      console.log('🔄 Sync iniciando…');
       const gist = await ghRequest('GET', `/gists/${getGistId()}`);
-      const file = gist.files && gist.files['biblioteca.json'];
 
-      if (!file) {
-        await guardarBiblioteca(true);
-        btn.classList.remove('sync-loading');
-        if (!silencioso) toast('✓ Biblioteca subida al Gist');
-        return true;
+      // 1. Fetch & merge eliminados.json
+      const elFile = gist.files && gist.files['eliminados.json'];
+      let gistElim = [];
+      if (elFile) {
+        try {
+          const c = elFile.truncated ? await (await fetchConTimeout(elFile.raw_url)).text() : elFile.content;
+          gistElim = JSON.parse(c);
+        } catch (e) { console.warn('eliminados.json parse:', e); }
       }
+      const localElim = getEliminados();
+      const mergedElim = Array.from(new Set([...localElim, ...gistElim]));
+      const gistElimSet = new Set(gistElim);
+      const newDeletions = mergedElim.filter(id => !gistElimSet.has(id));
+      const elimChanged = mergedElim.length !== localElim.length;
+      localStorage.setItem(LS_ELIMINADOS, JSON.stringify(mergedElim));
+      console.log(`📥 eliminados: local=${localElim.length} gist=${gistElim.length} merged=${mergedElim.length}`);
 
-      const contenido = file.truncated ? await (await fetchConTimeout(file.raw_url)).text() : file.content;
-      const gistData = JSON.parse(contenido);
-      const eliminados = getEliminados();
-      const mapaLocal = new Map(biblioteca.libros.map(l => [l.id, l]));
-      let cambiosLocal = false;
+      // 2. Filter local books
+      const beforeCount = biblioteca.libros.length;
+      biblioteca.libros = biblioteca.libros.filter(l => !mergedElim.includes(l.id));
+      let cambiosLocal = biblioteca.libros.length < beforeCount;
+      if (cambiosLocal) console.log(`🗑️ Removidos ${beforeCount - biblioteca.libros.length} libros eliminados`);
 
-      for (const gistLibro of gistData.libros) {
-        if (eliminados.includes(gistLibro.id)) continue;
-        const local = mapaLocal.get(gistLibro.id);
-        if (!local) {
-          biblioteca.libros.push(gistLibro);
-          cambiosLocal = true;
-        } else {
-          const pLocal = Number(local.progreso) || 0;
-          const pGist = Number(gistLibro.progreso) || 0;
-          const fLocal = Number(local.fecha) || 0;
-          const fGist = Number(gistLibro.fecha) || 0;
-          let usarGist = false;
-          if (pGist > pLocal) usarGist = true;
-          else if (pGist === pLocal && fGist > fLocal) usarGist = true;
-          if (usarGist) {
-            const idx = biblioteca.libros.findIndex(l => l.id === gistLibro.id);
-            if (idx >= 0) {
-              biblioteca.libros[idx] = {
-                ...local, ...gistLibro,
-                progreso: Math.max(pLocal, pGist),
-                fecha: Math.max(fLocal, fGist),
-                enProgreso: (local.enProgreso || gistLibro.enProgreso) || false,
-                leido: (local.leido || gistLibro.leido) || false,
-                favorito: (local.favorito || gistLibro.favorito) || false,
-              };
-              cambiosLocal = true;
+      // 3. Fetch & merge biblioteca.json
+      const bibFile = gist.files && gist.files['biblioteca.json'];
+      if (bibFile) {
+        const c = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
+        const gistData = JSON.parse(c);
+        const mapaLocal = new Map(biblioteca.libros.map(l => [l.id, l]));
+
+        for (const gistLibro of gistData.libros) {
+          if (mergedElim.includes(gistLibro.id)) continue;
+          const local = mapaLocal.get(gistLibro.id);
+          if (!local) {
+            biblioteca.libros.push(gistLibro);
+            cambiosLocal = true;
+            console.log(`  ➕ Agregado: ${gistLibro.titulo}`);
+          } else {
+            const pLocal = Number(local.progreso) || 0;
+            const pGist = Number(gistLibro.progreso) || 0;
+            const fLocal = Number(local.fecha) || 0;
+            const fGist = Number(gistLibro.fecha) || 0;
+            let usarGist = false;
+            if (pGist > pLocal) usarGist = true;
+            else if (pGist === pLocal && fGist > fLocal) usarGist = true;
+            if (usarGist) {
+              const idx = biblioteca.libros.findIndex(l => l.id === gistLibro.id);
+              if (idx >= 0) {
+                biblioteca.libros[idx] = {
+                  ...local, ...gistLibro,
+                  progreso: Math.max(pLocal, pGist),
+                  fecha: Math.max(fLocal, fGist),
+                  enProgreso: (local.enProgreso || gistLibro.enProgreso) || false,
+                  leido: (local.leido || gistLibro.leido) || false,
+                  favorito: (local.favorito || gistLibro.favorito) || false,
+                };
+                cambiosLocal = true;
+              }
             }
           }
         }
       }
 
-      const mapaGist = new Map(gistData.libros.map(l => [l.id, l]));
-      const hayLocalesNuevos = biblioteca.libros.some(l => !mapaGist.has(l.id) && !eliminados.includes(l.id));
-
-      if (cambiosLocal) localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-      if (hayLocalesNuevos || cambiosLocal) await guardarBiblioteca(true);
+      // 4. Save if anything changed
+      if (cambiosLocal || elimChanged || newDeletions.length > 0) {
+        const fileDeletes = {};
+        newDeletions.forEach(id => { fileDeletes[`libro-${id}.json`] = null; });
+        console.log(`📤 Subiendo al Gist (${newDeletions.length} borrados a propagar)`);
+        await guardarBiblioteca(true, fileDeletes);
+      }
 
       btn.classList.remove('sync-loading');
       $('#sSync').textContent = '✓';
@@ -578,12 +591,18 @@
     if (biblioteca.libros.length === 0) biblioteca = { version: 2, libros: [], preferencias: {} };
   }
 
-  async function guardarBiblioteca(silencioso = false) {
+  // ═══ GUARDAR: incluye eliminados.json ═══
+  async function guardarBiblioteca(silencioso = false, extraFiles = {}) {
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
     if (!tieneSync()) return true;
+    const eliminados = getEliminados();
     try {
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
-        files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
+        files: {
+          ...extraFiles,
+          'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) },
+          'eliminados.json': { content: JSON.stringify(eliminados) }
+        }
       });
       if (!silencioso) toast('✓ Sincronizado');
       return true;
@@ -734,7 +753,6 @@
 
   function abrirAdd() {
     $('#addTexto').value = '';
-    $('#addArchivo').value = '';
     $('#addDir').value = '';
     $('#addPreview').style.display = 'none';
     $('#addPreview').innerHTML = '';
@@ -846,19 +864,19 @@
     localStorage.removeItem(`libro-${l.id}.json`);
     biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-    addEliminado(l.id);
+    addEliminado(l.id);  // <-- a LS_ELIMINADOS
     $('#reviewModal').close();
     render();
     toast('Libro eliminado');
     if (tieneSync()) {
       try {
-        await eliminarLibroDeGist(l.id);
-        await guardarBiblioteca(true);
+        await eliminarLibroDeGist(l.id);        // borra libro-X.json
+        await guardarBiblioteca(true);          // guarda biblioteca.json + eliminados.json
       } catch (e) { toast('⚠ Local OK, Gist falló'); }
     }
   }
 
-  /* ═══ CARGA AUTOMÁTICA DE LIBRO + COVER ═══ */
+  /* ═══ CARGA DESDE CARPETA: Resumen.txt + Cover.jpg automático ═══ */
   async function loadBookFromFiles(txtFile, coverFile) {
     try {
       const texto = await leerArchivoTexto(txtFile);
@@ -868,8 +886,8 @@
         coverBlob = coverFile;
         mostrarPreviewPortada(coverFile);
       }
-      $('#fileInfo').textContent = `📄 ${txtFile.name}${coverFile ? ' + 🖼️ ' + coverFile.name : ' (sin Cover)'}`;
-      toast(coverFile ? '✓ Libro + portada cargados' : '✓ Libro cargado');
+      $('#fileInfo').textContent = `📄 ${txtFile.name}${coverFile ? ' + 🖼️ ' + coverFile.name : ' (sin Cover.jpg)'}`;
+      toast(coverFile ? '✓ Resumen.txt + Cover.jpg cargados' : '✓ Resumen.txt cargado (sin portada)');
     } catch (err) { toast('Error: ' + err.message); }
   }
 
@@ -878,18 +896,23 @@
     let coverFile = null;
     for await (const entry of dirHandle.values()) {
       if (entry.kind !== 'file') continue;
-      const name = entry.name.toLowerCase();
-      if (name.endsWith('.txt')) txtFiles.push({ handle: entry, name: entry.name });
+      const name = entry.name;
+      if (/\.txt$/i.test(name)) txtFiles.push({ handle: entry, name });
       if (/^cover\.(jpg|jpeg|png|webp)$/i.test(name)) {
         try { coverFile = await entry.getFile(); } catch (e) {}
       }
     }
-    if (!txtFiles.length) { toast('❌ No se encontró .txt en esa carpeta'); return; }
-    let selectedTxt = txtFiles[0];
-    if (txtFiles.length > 1) {
-      const opciones = txtFiles.map((e, i) => `${i+1}. ${e.name}`).join('\n');
-      const idx = parseInt(prompt(`Hay varios .txt:\n${opciones}\n\n¿Cuál usar? (1-${txtFiles.length})`, '1'), 10) - 1;
-      if (idx >= 0 && idx < txtFiles.length) selectedTxt = txtFiles[idx];
+    if (!txtFiles.length) {
+      toast('❌ No se encontró .txt en la carpeta');
+      return;
+    }
+    // Prioridad: Resumen.txt (R mayúscula, resto minúscula)
+    const selectedTxt =
+      txtFiles.find(f => f.name === 'Resumen.txt') ||
+      txtFiles.find(f => /^resumen\.txt$/i.test(f.name)) ||
+      txtFiles[0];
+    if (selectedTxt.name !== 'Resumen.txt' && !/^resumen\.txt$/i.test(selectedTxt.name)) {
+      toast('⚠ No se encontró Resumen.txt, usando ' + selectedTxt.name);
     }
     const txtFile = await selectedTxt.handle.getFile();
     await loadBookFromFiles(txtFile, coverFile);
@@ -899,11 +922,14 @@
     const txts = files.filter(f => /\.txt$/i.test(f.name));
     const cover = files.find(f => /^cover\.(jpg|jpeg|png|webp)$/i.test(f.name));
     if (!txts.length) { toast('❌ No se encontró .txt'); return; }
-    const txt = txts[0];
+    const txt =
+      txts.find(f => f.name === 'Resumen.txt') ||
+      txts.find(f => /^resumen\.txt$/i.test(f.name)) ||
+      txts[0];
     await loadBookFromFiles(txt, cover);
   }
 
-  // ⭐ Botón principal: seleccionar CARPETA (permite auto-portada)
+  // Único botón: seleccionar carpeta
   $('#btnSelectFolder').addEventListener('click', async () => {
     if ('showDirectoryPicker' in window) {
       try {
@@ -915,40 +941,16 @@
         console.warn('showDirectoryPicker:', e);
       }
     }
-    // Fallback: input webkitdirectory
     if ('webkitdirectory' in document.createElement('input')) {
       $('#addDir').click();
       return;
     }
-    // Último fallback: file picker (sin auto-cover)
-    $('#addArchivo').click();
+    toast('❌ Tu navegador no soporta seleccionar carpetas. Actualizá Chrome/Edge/Firefox.');
   });
 
-  // ⭐ Botón secundario: solo .txt (sin auto-portada)
-  $('#btnSelectFile').addEventListener('click', () => $('#addArchivo').click());
-
-  // Handler para webkitdirectory (fallback)
   $('#addDir').addEventListener('change', async (e) => {
     const files = Array.from(e.target.files || []);
     await processFilesList(files);
-    e.target.value = '';
-  });
-
-  // Handler para input file tradicional (solo .txt)
-  $('#addArchivo').addEventListener('change', async (e) => {
-    const files = e.target.files;
-    if (!files || !files.length) return;
-    for (const file of files) {
-      if (file.type.startsWith('text/') || /\.txt$/i.test(file.name)) {
-        try {
-          const texto = await leerArchivoTexto(file);
-          $('#addTexto').value = texto;
-          analizarTexto();
-          $('#fileInfo').textContent = `📄 ${file.name} (agregá la portada manualmente)`;
-          toast('✓ Texto cargado: ' + file.name);
-        } catch (err) { toast('Error: ' + err.message); }
-      }
-    }
     e.target.value = '';
   });
 
@@ -1019,39 +1021,6 @@
   $('#addCancelar').addEventListener('click', () => $('#addModal').close());
   $('#addGuardar').addEventListener('click', guardarNuevoLibro);
 
-  $('#addTexto').addEventListener('input', () => {
-    clearTimeout(window._addTextoDebounce);
-    window._addTextoDebounce = setTimeout(analizarTexto, 500);
-  });
-
-  $('#addBuscarPortada').addEventListener('click', async () => {
-    if (!parsedPreview?.titulo) {
-      analizarTexto();
-      if (!parsedPreview?.titulo) { toast('Cargá el texto primero'); return; }
-    }
-    toast('Buscando portada…');
-    try {
-      const small = await buscarPortadaAuto(parsedPreview.titulo, parsedPreview.autor);
-      if (small) { coverBlob = small; mostrarPreviewPortada(small); toast('✓ Portada encontrada'); }
-      else { toast('No se encontró portada'); }
-    } catch (e) { toast('Error: ' + e.message); }
-  });
-
-  $('#btnPegarPortada').addEventListener('click', async () => {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'));
-        if (imageType) {
-          const blob = await item.getType(imageType);
-          coverBlob = blob; mostrarPreviewPortada(blob); toast('✓ Imagen pegada');
-          return;
-        }
-      }
-      toast('No hay imágenes en el portapapeles');
-    } catch (e) { toast('Error: ' + e.message); }
-  });
-
   $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
   $('#syncGuardar').addEventListener('click', async () => {
     localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
@@ -1095,10 +1064,10 @@
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v21 cargado');
+    console.log('✅ index.html v22 cargado');
   })();
 
-  /* ═══ HELPERS RESTANTES ═══ */
+  /* ═══ HELPERS ═══ */
   function parsearTextoEstructurado(texto) {
     const lineas = texto.split('\n');
     const resultado = { titulo: '', autor: '', año: '', categoria: 'general', reseña: '', capitulos: [], secciones: [] };
@@ -1183,37 +1152,6 @@
     }
     flushBuffer(); flushReseña();
     return resultado;
-  }
-
-  async function buscarPortadaAuto(titulo, autor) {
-    if (!titulo) return null;
-    const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
-    const querys = [];
-    if (autor) querys.push(`intitle:${titulo} inauthor:${autor}`);
-    querys.push(`intitle:${titulo}`);
-    for (const q of querys) {
-      try {
-        const res = await timeout(fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`), 8000);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data.items) continue;
-        for (const item of data.items) {
-          const vi = item.volumeInfo;
-          if (!vi) continue;
-          let coverUrl = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail;
-          if (!coverUrl && item.id) coverUrl = `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=2`;
-          if (!coverUrl) continue;
-          coverUrl = coverUrl.replace(/^http:/, 'https:');
-          try {
-            const imgRes = await timeout(fetch(coverUrl, { mode: 'cors' }), 6000);
-            if (!imgRes.ok) continue;
-            const blob = await imgRes.blob();
-            if (blob.type.startsWith('image/') && blob.size > 2000) return await comprimirThumbnail(blob);
-          } catch {}
-        }
-      } catch {}
-    }
-    return null;
   }
 
   async function comprimirThumbnail(blob, maxW = 200, quality = 0.7) {

@@ -247,6 +247,7 @@
   const $ = (s) => document.querySelector(s);
   const SYNC_TOKEN_KEY = 'biblioteca-sync-token';
   const SYNC_GIST_KEY = 'biblioteca-sync-gist';
+  const LS_ELIMINADOS = 'biblioteca-eliminados-v1';
 
   const params = new URLSearchParams(location.search);
   const libroId = params.get('libro');
@@ -281,6 +282,10 @@
 
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
+
+  function getEliminados() {
+    try { return JSON.parse(localStorage.getItem(LS_ELIMINADOS) || '[]'); } catch { return []; }
+  }
 
   function findCap(capId) {
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -727,7 +732,6 @@
     setTimeout(() => reproducirTrozo(gen), 100);
   }
 
-  // ⭐ FIX: Reiniciar SIN autoplay
   function reiniciarCap(capId) {
     const cap = findCap(capId);
     if (!cap) return;
@@ -748,7 +752,6 @@
     toast('🔄 Capítulo reiniciado. Presioná ▶ para leer.');
   }
 
-  // ⭐ FIX: Jump SIN autoplay
   function jumpToFragment(capId, fragIdx) {
     const cap = findCap(capId);
     if (!cap) return;
@@ -828,8 +831,15 @@
     catch { pararTTS(); }
   }
 
+  // ⭐ GUARDAR: verifica si el libro fue eliminado en otro dispositivo
   function guardarProgreso() {
     if (!libro) return;
+    // Si el libro fue eliminado en otro dispositivo, no resucitarlo
+    const eliminados = getEliminados();
+    if (eliminados.includes(libroId)) {
+      console.warn('⚠ Libro eliminado en otro dispositivo, no se guarda');
+      return;
+    }
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
     let sumaFrags = 0, totalFrags = 0;
     for (const c of todosCaps) {
@@ -868,6 +878,9 @@
 
   async function guardarEnGistDebounced() {
     if (!getToken() || !getGistId()) return;
+    // No subir si el libro fue eliminado
+    const eliminados = getEliminados();
+    if (eliminados.includes(libroId)) return;
     try {
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
         files: {
@@ -1072,7 +1085,6 @@
     }
   }
 
-  // ⭐ FIX: goToChapter alinea a múltiplo de step (book mode)
   function goToChapter(capId) {
     const el = document.getElementById(`cap-${capId}`);
     if (!el) return;
@@ -1082,7 +1094,6 @@
       const viewRect = view.getBoundingClientRect();
       const offset = rect.left - viewRect.left + view.scrollLeft;
       const step = getScrollStep();
-      // Alinear al INICIO de la página que contiene el capítulo
       const targetIdx = Math.max(0, Math.floor(offset / step));
       goToPage(targetIdx);
       setTimeout(updateFloatingBar, 500);
@@ -1248,15 +1259,18 @@
   $('#btnBack').addEventListener('click', async () => {
     guardarProgreso();
     if (getToken() && getGistId()) {
-      clearTimeout(window._gistTimer);
-      try {
-        await ghRequest('PATCH', `/gists/${getGistId()}`, {
-          files: {
-            [`libro-${libroId}.json`]: { content: JSON.stringify(libro) },
-            'biblioteca.json': { content: JSON.stringify(biblioteca) }
-          }
-        });
-      } catch (e) { console.warn(e.message); }
+      const eliminados = getEliminados();
+      if (!eliminados.includes(libroId)) {
+        clearTimeout(window._gistTimer);
+        try {
+          await ghRequest('PATCH', `/gists/${getGistId()}`, {
+            files: {
+              [`libro-${libroId}.json`]: { content: JSON.stringify(libro) },
+              'biblioteca.json': { content: JSON.stringify(biblioteca) }
+            }
+          });
+        } catch (e) { console.warn(e.message); }
+      }
     }
     pararTTS();
     await new Promise(r => setTimeout(r, 150));
@@ -1276,7 +1290,7 @@
       renderHeader();
       renderTOC();
       renderContenido();
-      console.log('✅ lector.html v21. Progreso:', entradaBiblioteca?.progreso);
+      console.log('✅ lector.html v22. Progreso:', entradaBiblioteca?.progreso);
       setTimeout(() => {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
         const capActivo = todosCaps.find(c => (c.ttsIndice || 0) > 0);

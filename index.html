@@ -430,7 +430,7 @@
       
       <div class="field">
         <label for="addArchivo">Subir archivos (TXT y JPG/PNG)</label>
-        <input type="file" id="addArchivo" accept=".txt,.md,.jpg,.jpeg,.png" multiple />
+        <input type="file" id="addArchivo" multiple />
       </div>
 
       <div class="field">
@@ -452,7 +452,7 @@
       <div id="addPreview" style="padding:12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);display:none"></div>
     </div>
     <footer class="modal-foot">
-      <button type="button" class="btn btn-ghost" id="addCancelar">Cancelar</button>
+      <button type="button" class="btn btn-ghost" id="addCancelar">Cerrar</button>
       <button type="button" class="btn btn-primary" id="addGuardar">Guardar Libro</button>
     </footer>
   </div>
@@ -563,7 +563,6 @@
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
-  const nPalabras = (t) => { const s = String(t||'').trim(); return s ? s.split(/\s+/).length : 0; };
   const normalizar = (s) => String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 
   function getCat(id) { return CATEGORIAS.find(c => c.id === id) || CATEGORIAS[0]; }
@@ -653,7 +652,11 @@
   }
 
   async function guardarBiblioteca(silencioso = false) {
-    if (!tieneSync()) { toast('Configurá el sync primero'); return false; }
+    if (!tieneSync()) { 
+        // Guardar localmente aunque no haya sync
+        localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+        return true; 
+    }
     try {
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
         files: { 'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) } }
@@ -664,7 +667,8 @@
       return true;
     } catch (e) {
       $('#sSync').textContent = '⚠';
-      toast('Error: ' + e.message);
+      localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+      if (!silencioso) toast('Error de sync: ' + e.message + ' (guardado local)');
       return false;
     }
   }
@@ -1007,8 +1011,7 @@
       if (biblioteca.libros.length === 0) {
         vacio.innerHTML = `<div class="empty">
           <h3>Tu biblioteca está vacía</h3>
-          <p>Toca «Añadir» para cargar tu primer libro.</p>
-          <button class="btn btn-primary" onclick="document.getElementById('btnAdd').click()">Añadir libro</button>
+          <p>Usá el botón «Añadir» de arriba para cargar tu primer libro.</p>
         </div>`;
       } else {
         vacio.innerHTML = `<div class="empty"><h3>Sin resultados</h3><p>Probá otro filtro o búsqueda.</p></div>`;
@@ -1094,6 +1097,15 @@
     $('#addModal').showModal();
   }
 
+  function leerArchivoTexto(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(new Error('Error al leer el archivo'));
+      reader.readAsText(file, 'UTF-8');
+    });
+  }
+
   function analizarTexto() {
     const texto = $('#addTexto').value.trim();
     if (!texto) { return; }
@@ -1104,16 +1116,19 @@
       parsedPreview = parsed;
 
       let html = `<div style="font-size:.85rem;line-height:1.6">
-        <strong>Detectado:</strong><br>
+        <strong>✓ Contenido detectado:</strong><br>
         📖 Título: ${esc(parsed.titulo || '(sin título)')}<br>
         ✍️ Autor: ${esc(parsed.autor || '(sin autor)')}<br>
         🏷️ Categoría: ${esc(getCat(parsed.categoria).nombre)}<br>
-        📚 Capítulos: ${totalCaps}
+        📚 Capítulos: ${totalCaps}<br>
+        ${parsed.reseña ? `📝 Reseña: ${esc(parsed.reseña.slice(0, 80))}…` : ''}
       </div>`;
       $('#addPreview').innerHTML = html;
       $('#addPreview').style.display = 'block';
+      toast('✓ Analizado: ' + totalCaps + ' capítulo(s)');
     } catch (e) {
       console.warn('Error al analizar:', e);
+      toast('Error al analizar: ' + e.message);
     }
   }
 
@@ -1125,15 +1140,13 @@
   }
 
   async function guardarNuevoLibro() {
-    // Auto-analizar si no se ha hecho
     if (!parsedPreview) {
       analizarTexto();
       if (!parsedPreview) {
-        toast('No se detectó texto válido. Subí un archivo o pegá el texto.');
+        toast('No se detectó texto válido. Subí un archivo TXT o pegá el texto.');
         return;
       }
     }
-    if (!tieneSync()) { toast('Configurá el sync primero'); return; }
 
     const btn = $('#addGuardar');
     btn.disabled = true;
@@ -1174,11 +1187,24 @@
         progreso: 0
       };
 
-      await guardarLibroEnGist(nuevoId, contenidoLibro);
+      // Guardar siempre en localStorage primero
+      localStorage.setItem(`libro-${nuevoId}.json`, JSON.stringify(contenidoLibro));
       biblioteca.libros.push(entrada);
-      await guardarBiblioteca(true);
+      localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
 
-      toast('✓ Libro guardado correctamente');
+      // Intentar sincronizar si está configurado
+      if (tieneSync()) {
+        try {
+          await guardarLibroEnGist(nuevoId, contenidoLibro);
+          await guardarBiblioteca(true);
+          toast('✓ Libro guardado y sincronizado');
+        } catch (syncErr) {
+          toast('✓ Libro guardado localmente');
+        }
+      } else {
+        toast('✓ Libro guardado localmente');
+      }
+
       $('#addModal').close();
       render();
     } catch (e) {
@@ -1214,7 +1240,10 @@
     const l = libroActualReview;
     if (!confirm(`¿Eliminar «${l.titulo}»?\n\nSe borrará también del Gist.`)) return;
     try {
-      await eliminarLibroDeGist(l.id);
+      if (tieneSync()) {
+        await eliminarLibroDeGist(l.id);
+      }
+      localStorage.removeItem(`libro-${l.id}.json`);
       biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
       await guardarBiblioteca(true);
       toast('Libro eliminado');
@@ -1283,17 +1312,26 @@
     if (!files || files.length === 0) return;
     
     for (const file of files) {
-      if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-        const texto = await file.text();
-        $('#addTexto').value = texto;
-        analizarTexto();
-        toast('Texto cargado');
-      } else if (file.type.startsWith('image/')) {
+      const isText = file.type.startsWith('text/') || /\.(txt|md|text)$/i.test(file.name);
+      const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(file.name);
+      
+      if (isText) {
+        try {
+          const texto = await leerArchivoTexto(file);
+          $('#addTexto').value = texto;
+          analizarTexto();
+          toast('✓ Texto cargado: ' + file.name);
+        } catch (err) {
+          toast('Error al leer: ' + err.message);
+        }
+      } else if (isImage) {
         coverBlob = file;
         mostrarPreviewPortada(file);
-        toast('Portada cargada');
+        toast('✓ Portada cargada: ' + file.name);
       }
     }
+    
+    e.target.value = '';
   });
 
   // Analizar en tiempo real al pegar texto
@@ -1305,7 +1343,6 @@
   // Botón Buscar Portada
   $('#addBuscarPortada').addEventListener('click', async () => {
     if (!parsedPreview || !parsedPreview.titulo) { 
-      // Si no se ha analizado, intentar analizar primero
       analizarTexto();
       if (!parsedPreview || !parsedPreview.titulo) {
         toast('Primero cargá el texto para saber el título'); 
@@ -1345,7 +1382,7 @@
     }
   });
 
-  // Modales de Sync y Settings (sin cambios)
+  // Modales de Sync y Settings
   $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
   $('#syncGuardar').addEventListener('click', async () => {
     localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
@@ -1359,12 +1396,9 @@
     if (!confirm('¿Borrar configuración de sync?\n\nTus libros NO se borran (solo la config).')) return;
     localStorage.removeItem(SYNC_TOKEN_KEY);
     localStorage.removeItem(SYNC_GIST_KEY);
-    localStorage.removeItem(LS_CACHE_BIB);
     $('#syncToken').value = '';
     $('#syncGistId').value = '';
     toast('Configuración borrada');
-    biblioteca = { version: 2, libros: [], preferencias: {} };
-    render();
     $('#sSync').textContent = '—';
   });
   $('#btnProbarSync').addEventListener('click', async () => {

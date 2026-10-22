@@ -27,7 +27,6 @@
     -webkit-font-smoothing:antialiased;
   }
 
-  /* Header sticky */
   .topbar{
     position:sticky; top:0; z-index:50;
     background:color-mix(in srgb, var(--paper) 92%, transparent);
@@ -113,7 +112,6 @@
     main{ padding:20px 18px 100px }
   }
 
-  /* Vista del libro tipo "papel" */
   .book-page{
     background:var(--paper);
     border-radius:6px;
@@ -125,14 +123,13 @@
     .book-page{ padding:24px 20px; border-radius:0; border:none; box-shadow:none; margin:0 -18px }
   }
 
-  /* Portada del libro */
   .book-cover-hero{
     text-align:center; padding:20px 0 30px;
     border-bottom:2px solid var(--border);
     margin-bottom:30px;
   }
   .book-cover-hero img{
-    width:120px; height:170px; object-fit:cover; border-radius:4px 10px 10px 4px;
+    width:140px; height:200px; object-fit:cover; border-radius:4px 10px 10px 4px;
     box-shadow:0 10px 30px -10px rgba(0,0,0,.4);
     margin-bottom:16px;
   }
@@ -145,7 +142,6 @@
     font-size:1rem;
   }
 
-  /* Capítulo */
   .chapter{
     margin-bottom:60px;
     scroll-margin-top:80px;
@@ -180,13 +176,21 @@
     font-size:1.08rem;
     line-height:1.75;
     color:var(--ink);
-    white-space:pre-wrap;
-    overflow-wrap:anywhere;
   }
   .chapter-section .content p{
     margin:0 0 .9em;
   }
   .chapter-section .content p:last-child{ margin-bottom:0 }
+
+  .fragmento {
+    transition: background-color 0.2s, box-shadow 0.2s;
+    border-radius: 3px;
+    padding: 2px 0;
+  }
+  .fragmento.activo {
+    background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
 
   .preguntas-list{
     list-style:none; padding:0; margin:0;
@@ -210,13 +214,11 @@
     font-family:var(--sans); font-size:.72rem; font-weight:800;
   }
 
-  /* Separador entre capítulos */
   .chapter-divider{
     text-align:center; color:var(--muted);
     margin:40px 0; font-size:1.2rem; letter-spacing:1em;
   }
 
-  /* TTS controls floating */
   .tts-bar{
     position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
     background:var(--paper); border:1px solid var(--border);
@@ -273,7 +275,6 @@
     margin-top:20px;
   }
 
-  /* Notas */
   .notas-section{
     margin-top:24px; padding-top:20px;
     border-top:1px dashed var(--border);
@@ -455,179 +456,45 @@
 
   async function cargarDatos() {
     if (!libroId) throw new Error('No se especificó el libro en la URL');
-    if (!getToken() || !getGistId()) throw new Error('Sync no configurado. Volvé a la biblioteca y configurá el token.');
 
-    const gist = await ghRequest('GET', `/gists/${getGistId()}`);
+    // Try Gist first
+    if (getToken() && getGistId()) {
+      try {
+        const gist = await ghRequest('GET', `/gists/${getGistId()}`);
 
-    // Cargar biblioteca (para metadata + estado)
-    const bibFile = gist.files && gist.files['biblioteca.json'];
-    if (bibFile) {
-      const content = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
-      biblioteca = JSON.parse(content);
+        const bibFile = gist.files && gist.files['biblioteca.json'];
+        if (bibFile) {
+          const content = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
+          biblioteca = JSON.parse(content);
+          entradaBiblioteca = biblioteca.libros.find(l => l.id === libroId);
+        }
+
+        const libFile = gist.files && gist.files[`libro-${libroId}.json`];
+        if (libFile) {
+          const libContent = libFile.truncated ? await (await fetchConTimeout(libFile.raw_url)).text() : libFile.content;
+          libro = JSON.parse(libContent);
+          libro.id = libroId;
+          return;
+        }
+      } catch (e) {
+        console.warn('Gist load failed, trying localStorage:', e.message);
+      }
+    }
+
+    // Fallback to localStorage
+    const localLibro = localStorage.getItem(`libro-${libroId}.json`);
+    if (localLibro) {
+      libro = JSON.parse(localLibro);
+      libro.id = libroId;
+    } else {
+      throw new Error('Libro no encontrado. Asegurate de tener sync configurado o que el libro esté guardado localmente.');
+    }
+
+    const localBib = localStorage.getItem('biblioteca-cache-v11');
+    if (localBib) {
+      biblioteca = JSON.parse(localBib);
       entradaBiblioteca = biblioteca.libros.find(l => l.id === libroId);
     }
-
-    // Cargar libro
-    const libFile = gist.files && gist.files[`libro-${libroId}.json`];
-    if (!libFile) throw new Error('Libro no encontrado en la nube');
-    const libContent = libFile.truncated ? await (await fetchConTimeout(libFile.raw_url)).text() : libFile.content;
-    libro = JSON.parse(libContent);
-    libro.id = libroId;
-  }
-
-  /* ═══ RENDER ═══ */
-  function renderHeader() {
-    const titulo = entradaBiblioteca?.titulo || 'Libro';
-    const autor = entradaBiblioteca?.autor || '';
-    $('#headerTitulo').textContent = titulo;
-    $('#headerAutor').textContent = autor;
-    document.title = titulo;
-
-    if (entradaBiblioteca?.favorito) {
-      $('#btnFav').style.color = 'var(--accent)';
-      $('#btnFav').style.background = 'color-mix(in srgb, var(--accent) 10%, transparent)';
-    }
-    if (entradaBiblioteca?.leido) {
-      $('#btnLeido').style.color = 'var(--ok)';
-      $('#btnLeido').style.background = 'color-mix(in srgb, var(--ok) 10%, transparent)';
-    }
-  }
-
-  function renderTOC() {
-    const capsDirectos = libro.capitulos || [];
-    const secs = libro.secciones || [];
-    let html = '';
-    capsDirectos.forEach((c, i) => {
-      html += `<div class="toc-item" data-cap="${c.id}">
-        <div class="num">${i+1}</div>
-        <div class="titulo-toc">${esc(c.titulo)}</div>
-      </div>`;
-    });
-    secs.forEach(s => {
-      html += `<div class="toc-item seccion-toc" data-sec="${s.id}">
-        <div class="num">§</div>
-        <div class="titulo-toc">${esc(s.titulo)}</div>
-      </div>`;
-      (s.capitulos || []).forEach((c, i) => {
-        html += `<div class="toc-item" data-cap="${c.id}" style="padding-left:24px">
-          <div class="num" style="background:var(--accent-2)">${i+1}</div>
-          <div class="titulo-toc">${esc(c.titulo)}</div>
-        </div>`;
-      });
-    });
-    $('#tocList').innerHTML = html;
-    const total = capsDirectos.length + secs.reduce((a, s) => a + (s.capitulos?.length || 0), 0);
-    $('#tocLabel').textContent = `Índice · ${total} capítulo${total === 1 ? '' : 's'}`;
-  }
-
-  function renderContenido() {
-    const main = $('#main');
-    let html = '';
-
-    // Portada hero
-    const titulo = entradaBiblioteca?.titulo || 'Sin título';
-    const autor = entradaBiblioteca?.autor || '';
-    const thumb = entradaBiblioteca?.thumbnail;
-    html += `<div class="book-cover-hero">
-      ${thumb ? `<img src="${thumb}" alt="">` : ''}
-      <h1>${esc(titulo)}</h1>
-      ${autor ? `<p class="autor">${esc(autor)}</p>` : ''}
-      ${entradaBiblioteca?.reseña ? `<p style="margin-top:16px;font-family:var(--serif);font-style:italic;color:var(--muted);font-size:.95rem;max-width:500px;margin-left:auto;margin-right:auto">${esc(entradaBiblioteca.reseña)}</p>` : ''}
-    </div>`;
-
-    // Capítulos directos
-    (libro.capitulos || []).forEach((c, i) => {
-      html += renderCap(c, i);
-    });
-
-    // Secciones
-    (libro.secciones || []).forEach(s => {
-      html += `<div class="chapter-divider">§</div>`;
-      html += `<div class="chapter" data-sec-header="${s.id}">
-        <div class="chapter-num">Sección</div>
-        <h2 class="chapter-title">${esc(s.titulo)}</h2>
-      </div>`;
-      (s.capitulos || []).forEach((c, i) => {
-        html += renderCap(c, i);
-      });
-    });
-
-    main.innerHTML = html;
-    actualizarProgreso();
-  }
-
-  function renderCap(c, idx) {
-    let html = `<section class="chapter" id="cap-${c.id}" data-cap-id="${c.id}">
-      <div class="chapter-num">Capítulo ${idx+1}</div>
-      <h2 class="chapter-title">${esc(c.titulo)}</h2>`;
-
-    if (c.resumen) html += seccion('Resumen', c.resumen);
-    if (c.puntos) html += seccion('Puntos importantes', c.puntos);
-    if (c.aplicacion) html += seccion('Aplicación / matices', c.aplicacion);
-    if (c.enseñanza) html += seccion('Enseñanza', c.enseñanza);
-
-    if (c.preguntas && c.preguntas.length) {
-      html += `<div class="chapter-section">
-        <h3>Preguntas clave</h3>
-        <ul class="preguntas-list">
-          ${c.preguntas.map(q => `<li>${esc(q)}</li>`).join('')}
-        </ul>
-      </div>`;
-    }
-
-    // Notas
-    html += `<div class="notas-section" data-notas="${c.id}">
-      <h4>📝 Notas</h4>
-      <div class="notas-list" id="notas-${c.id}">
-        ${(c.notas || []).map((n, i) => `
-          <div class="nota-item">
-            <span class="texto">${esc(n)}</span>
-            <button class="del" data-del-nota="${c.id}" data-idx="${i}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-          </div>
-        `).join('')}
-      </div>
-      <div class="nota-add">
-        <input type="text" placeholder="Añadir nota…" data-input-nota="${c.id}" />
-        <button data-add-nota="${c.id}">+</button>
-      </div>
-    </div>`;
-
-    html += `</section>`;
-    return html;
-  }
-
-  function seccion(titulo, contenido) {
-    return `<div class="chapter-section">
-      <h3>${esc(titulo)}</h3>
-      <div class="content">${esc(contenido)}</div>
-    </div>`;
-  }
-
-  /* ═══ TTS ═══ */
-  function elegirVoz() {
-    if (!('speechSynthesis' in window)) return null;
-    const voces = window.speechSynthesis.getVoices() || [];
-    const es = voces.filter(v => /^es/i.test(v.lang));
-    const pool = es.length ? es : voces;
-    if (!pool.length) return null;
-    function puntuar(v) {
-      let p = 0;
-      const n = (v.name||'').toLowerCase(), l = (v.lang||'').toLowerCase();
-      if (l === 'es-es') p += 40;
-      else if (l.startsWith('es-')) p += 25;
-      if (n.includes('neural') || n.includes('enhanced') || n.includes('premium')) p += 40;
-      if (n.includes('siri') || n.includes('google')) p += 20;
-      return p;
-    }
-    mejorVoz = pool.map(v => ({v, p: puntuar(v)})).sort((a,b) => b.p - a.p)[0]?.v || null;
-    return mejorVoz;
-  }
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => elegirVoz();
-    elegirVoz();
-    setTimeout(elegirVoz, 800);
   }
 
   function dividirEnTrozos(texto, maxLen = 220) {
@@ -678,6 +545,168 @@
     return trozos.filter(t => t.length > 0);
   }
 
+  function renderHeader() {
+    const titulo = entradaBiblioteca?.titulo || 'Libro';
+    const autor = entradaBiblioteca?.autor || '';
+    $('#headerTitulo').textContent = titulo;
+    $('#headerAutor').textContent = autor;
+    document.title = titulo;
+
+    if (entradaBiblioteca?.favorito) {
+      $('#btnFav').style.color = 'var(--accent)';
+      $('#btnFav').style.background = 'color-mix(in srgb, var(--accent) 10%, transparent)';
+    }
+    if (entradaBiblioteca?.leido) {
+      $('#btnLeido').style.color = 'var(--ok)';
+      $('#btnLeido').style.background = 'color-mix(in srgb, var(--ok) 10%, transparent)';
+    }
+  }
+
+  function renderTOC() {
+    const capsDirectos = libro.capitulos || [];
+    const secs = libro.secciones || [];
+    let html = '';
+    capsDirectos.forEach((c, i) => {
+      html += `<div class="toc-item" data-cap="${c.id}">
+        <div class="num">${i+1}</div>
+        <div class="titulo-toc">${esc(c.titulo)}</div>
+      </div>`;
+    });
+    secs.forEach(s => {
+      html += `<div class="toc-item seccion-toc" data-sec="${s.id}">
+        <div class="num">§</div>
+        <div class="titulo-toc">${esc(s.titulo)}</div>
+      </div>`;
+      (s.capitulos || []).forEach((c, i) => {
+        html += `<div class="toc-item" data-cap="${c.id}" style="padding-left:24px">
+          <div class="num" style="background:var(--accent-2)">${i+1}</div>
+          <div class="titulo-toc">${esc(c.titulo)}</div>
+        </div>`;
+      });
+    });
+    $('#tocList').innerHTML = html;
+    const total = capsDirectos.length + secs.reduce((a, s) => a + (s.capitulos?.length || 0), 0);
+    $('#tocLabel').textContent = `Índice · ${total} capítulo${total === 1 ? '' : 's'}`;
+  }
+
+  function renderContenido() {
+    const main = $('#main');
+    let html = '';
+
+    const titulo = entradaBiblioteca?.titulo || 'Sin título';
+    const autor = entradaBiblioteca?.autor || '';
+    const thumb = entradaBiblioteca?.thumbnail;
+    html += `<div class="book-cover-hero">
+      ${thumb ? `<img src="${thumb}" alt="">` : ''}
+      <h1>${esc(titulo)}</h1>
+      ${autor ? `<p class="autor">${esc(autor)}</p>` : ''}
+      ${entradaBiblioteca?.reseña ? `<p style="margin-top:16px;font-family:var(--serif);font-style:italic;color:var(--muted);font-size:.95rem;max-width:500px;margin-left:auto;margin-right:auto">${esc(entradaBiblioteca.reseña)}</p>` : ''}
+    </div>`;
+
+    (libro.capitulos || []).forEach((c, i) => {
+      html += renderCap(c, i);
+    });
+
+    (libro.secciones || []).forEach(s => {
+      html += `<div class="chapter-divider">§</div>`;
+      html += `<div class="chapter" data-sec-header="${s.id}">
+        <div class="chapter-num">Sección</div>
+        <h2 class="chapter-title">${esc(s.titulo)}</h2>
+      </div>`;
+      (s.capitulos || []).forEach((c, i) => {
+        html += renderCap(c, i);
+      });
+    });
+
+    main.innerHTML = html;
+    actualizarProgreso();
+  }
+
+  function renderCap(c, idx) {
+    let html = `<section class="chapter" id="cap-${c.id}" data-cap-id="${c.id}">
+      <div class="chapter-num">Capítulo ${idx+1}</div>
+      <h2 class="chapter-title">${esc(c.titulo)}</h2>`;
+
+    c.fragmentosPlanos = [];
+    c._fragOffset = 0;
+
+    function renderSeccion(titulo, contenido) {
+      if (!contenido) return '';
+      const parrafos = String(contenido).split(/\n\s*\n/).filter(p => p.trim());
+      let htmlSec = `<div class="chapter-section">
+        <h3>${esc(titulo)}</h3>
+        <div class="content">`;
+      for (const p of parrafos) {
+        const frags = dividirEnTrozos(p);
+        htmlSec += `<p>`;
+        for (const frag of frags) {
+          const fragIndex = c._fragOffset;
+          c.fragmentosPlanos.push(frag);
+          c._fragOffset++;
+          htmlSec += `<span class="fragmento" data-frag-index="${fragIndex}">${esc(frag)}</span> `;
+        }
+        htmlSec += `</p>`;
+      }
+      htmlSec += `</div></div>`;
+      return htmlSec;
+    }
+
+    if (c.resumen) html += renderSeccion('Resumen', c.resumen);
+    if (c.puntos) html += renderSeccion('Puntos importantes', c.puntos);
+    if (c.aplicacion) html += renderSeccion('Aplicación / matices', c.aplicacion);
+    if (c.enseñanza) html += renderSeccion('Enseñanza', c.enseñanza);
+
+    if (c.preguntas && c.preguntas.length) {
+      let preguntasTexto = c.preguntas.join('\n\n');
+      html += renderSeccion('Preguntas clave', preguntasTexto);
+    }
+
+    html += `<div class="notas-section" data-notas="${c.id}">
+      <h4>📝 Notas</h4>
+      <div class="notas-list" id="notas-${c.id}">
+        ${(c.notas || []).map((n, i) => `
+          <div class="nota-item">
+            <span class="texto">${esc(n)}</span>
+            <button class="del" data-del-nota="${c.id}" data-idx="${i}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+        `).join('')}
+      </div>
+      <div class="nota-add">
+        <input type="text" placeholder="Añadir nota…" data-input-nota="${c.id}" />
+        <button data-add-nota="${c.id}">+</button>
+      </div>
+    </div>`;
+
+    html += `</section>`;
+    return html;
+  }
+
+  function elegirVoz() {
+    if (!('speechSynthesis' in window)) return null;
+    const voces = window.speechSynthesis.getVoices() || [];
+    const es = voces.filter(v => /^es/i.test(v.lang));
+    const pool = es.length ? es : voces;
+    if (!pool.length) return null;
+    function puntuar(v) {
+      let p = 0;
+      const n = (v.name||'').toLowerCase(), l = (v.lang||'').toLowerCase();
+      if (l === 'es-es') p += 40;
+      else if (l.startsWith('es-')) p += 25;
+      if (n.includes('neural') || n.includes('enhanced') || n.includes('premium')) p += 40;
+      if (n.includes('siri') || n.includes('google')) p += 20;
+      return p;
+    }
+    mejorVoz = pool.map(v => ({v, p: puntuar(v)})).sort((a,b) => b.p - a.p)[0]?.v || null;
+    return mejorVoz;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => elegirVoz();
+    elegirVoz();
+    setTimeout(elegirVoz, 800);
+  }
+
   function capTextoCompleto(cap) {
     let parts = [];
     if (cap.resumen) parts.push(cap.resumen);
@@ -691,6 +720,7 @@
   function limpiarTTS() {
     document.querySelectorAll('.chapter.subrayado').forEach(el => el.classList.remove('subrayado'));
     document.querySelectorAll('.toc-item.current').forEach(el => el.classList.remove('current'));
+    document.querySelectorAll('.fragmento.activo').forEach(el => el.classList.remove('activo'));
   }
 
   function pararTTS() {
@@ -703,19 +733,29 @@
     limpiarTTS();
   }
 
+  function destacarFragmento(capId, fragIdx) {
+    const capEl = document.getElementById(`cap-${capId}`);
+    if (!capEl) return;
+    capEl.querySelectorAll('.fragmento.activo').forEach(el => el.classList.remove('activo'));
+    const span = capEl.querySelector(`.fragmento[data-frag-index="${fragIdx}"]`);
+    if (span) {
+      span.classList.add('activo');
+      span.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   function hablarCap(capId) {
     if (!('speechSynthesis' in window)) { toast('Sin soporte de voz'); return; }
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
     const cap = todosCaps.find(c => c.id === capId);
     if (!cap) return;
-    const texto = capTextoCompleto(cap);
-    if (!texto.trim()) { toast('Este capítulo no tiene contenido'); return; }
+    if (!cap.fragmentosPlanos || !cap.fragmentosPlanos.length) { toast('Este capítulo no tiene contenido'); return; }
 
     pararTTS();
     ttsGen++;
     const gen = ttsGen;
-    ttsFrags = dividirEnTrozos(texto);
-    ttsIdx = cap.ttsIndice || 0;
+    ttsFrags = cap.fragmentosPlanos;
+    ttsIdx = Math.min(cap.ttsIndice || 0, ttsFrags.length - 1);
     ttsActivo = true;
     capTTSActual = capId;
 
@@ -735,7 +775,6 @@
     if (gen !== ttsGen) return;
     if (!ttsActivo) return;
     if (ttsIdx >= ttsFrags.length) {
-      // Terminado
       if (capTTSActual) {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
         const cap = todosCaps.find(c => c.id === capTTSActual);
@@ -747,14 +786,18 @@
       return;
     }
     if (!mejorVoz) elegirVoz();
+    
+    if (capTTSActual) {
+      destacarFragmento(capTTSActual, ttsIdx);
+      const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+      const cap = todosCaps.find(c => c.id === capTTSActual);
+      if (cap) cap.ttsIndice = ttsIdx;
+    }
+
     const u = new SpeechSynthesisUtterance(ttsFrags[ttsIdx]);
     u.lang = 'es-ES';
     u.rate = ttsVelocidad;
     if (mejorVoz) { u.voice = mejorVoz; u.lang = mejorVoz.lang || 'es-ES'; }
-
-    const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
-    const cap = todosCaps.find(c => c.id === capTTSActual);
-    if (cap) cap.ttsIndice = ttsIdx;
 
     u.onend = () => {
       if (gen !== ttsGen) return;
@@ -773,7 +816,6 @@
 
   function togglePausa() {
     if (!ttsActivo) {
-      // Reproducir el primer capítulo o el actual
       const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
       if (!todosCaps.length) return;
       hablarCap(todosCaps[0].id);
@@ -795,19 +837,15 @@
     $('#iconPause').style.display = enReproduccion ? '' : 'none';
   }
 
-  /* ═══ PROGRESO ═══ */
   async function guardarProgreso() {
     if (!entradaBiblioteca || !libro) return;
-    // Calcular % global
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
     let sumaFrags = 0;
     let totalFrags = 0;
     for (const c of todosCaps) {
-      const txt = capTextoCompleto(c);
-      if (!txt.trim()) continue;
-      const frags = dividirEnTrozos(txt).length;
-      totalFrags += frags;
-      sumaFrags += Math.min(c.ttsIndice || 0, frags);
+      if (!c.fragmentosPlanos) continue;
+      totalFrags += c.fragmentosPlanos.length;
+      sumaFrags += Math.min(c.ttsIndice || 0, c.fragmentosPlanos.length);
     }
     const pct = totalFrags > 0 ? Math.round((sumaFrags / totalFrags) * 100) : 0;
     entradaBiblioteca.progreso = pct;
@@ -817,10 +855,12 @@
       if (idx >= 0) biblioteca.libros[idx] = { ...entradaBiblioteca };
     }
 
-    // Actualizar progreso local
+    // Guardar siempre en localStorage
+    localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
+    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+
     actualizarProgreso();
 
-    // Guardar en Gist
     if (getToken() && getGistId()) {
       try {
         await ghRequest('PATCH', `/gists/${getGistId()}`, {
@@ -841,7 +881,6 @@
     $('#progressFill').style.width = pct + '%';
   }
 
-  /* ═══ FAV / LEIDO ═══ */
   async function toggleFav() {
     if (!entradaBiblioteca) return;
     entradaBiblioteca.favorito = !entradaBiblioteca.favorito;
@@ -849,6 +888,7 @@
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) biblioteca.libros[idx].favorito = entradaBiblioteca.favorito;
     }
+    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
     renderHeader();
     if (getToken() && getGistId()) {
       try {
@@ -868,6 +908,7 @@
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) biblioteca.libros[idx] = { ...entradaBiblioteca };
     }
+    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
     renderHeader();
     actualizarProgreso();
     if (getToken() && getGistId()) {
@@ -880,7 +921,6 @@
     toast(entradaBiblioteca.leido ? '✓ Marcado como leído' : 'Marcado como no leído');
   }
 
-  /* ═══ NOTAS ═══ */
   function agregarNota(capId, txt) {
     if (!libro || !txt) return;
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -923,9 +963,7 @@
     guardarProgreso();
   }
 
-  /* ═══ EVENTOS ═══ */
   document.body.addEventListener('click', (e) => {
-    // TOC
     const tocItem = e.target.closest('.toc-item');
     if (tocItem && tocItem.dataset.cap) {
       const capId = tocItem.dataset.cap;
@@ -935,19 +973,16 @@
         document.querySelectorAll('.toc-item.current').forEach(t => t.classList.remove('current'));
         tocItem.classList.add('current');
         $('#tocPanel').classList.remove('open');
-        // Reproducir este capítulo
         hablarCap(capId);
       }
       return;
     }
 
-    // Del nota
     const delNota = e.target.closest('[data-del-nota]');
     if (delNota) {
       eliminarNota(delNota.dataset.delNota, Number(delNota.dataset.idx));
       return;
     }
-    // Add nota
     const addNota = e.target.closest('[data-add-nota]');
     if (addNota) {
       const capId = addNota.dataset.addNota;
@@ -993,7 +1028,6 @@
   $('#speed').addEventListener('change', (e) => {
     ttsVelocidad = parseFloat(e.target.value);
     if (ttsActivo && !ttsPausado) {
-      // Reiniciar reproducción con nueva velocidad
       ttsGen++;
       const gen = ttsGen;
       try { window.speechSynthesis.cancel(); } catch {}
@@ -1001,12 +1035,10 @@
     }
   });
 
-  // Guardar al cerrar
   window.addEventListener('pagehide', () => {
     if (ttsActivo) guardarProgreso();
   });
 
-  /* ═══ INIT ═══ */
   (async function init() {
     try {
       await cargarDatos();

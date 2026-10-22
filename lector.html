@@ -150,9 +150,14 @@
     box-shadow:none;
     border:none;
   }
-  body.book-mode .chapter,
+  /* IMPORTANTE: no bloquear break-inside en .chapter completo
+     (permite que capítulos largos se dividan entre columnas) */
   body.book-mode .chapter-divider,
   body.book-mode .book-cover-hero{ break-inside:avoid; }
+  body.book-mode .chapter-title,
+  body.book-mode .chapter-num,
+  body.book-mode .chapter-tts-bar,
+  body.book-mode .chapter-section h3{ break-inside:avoid; break-after:avoid; }
 
   .book-page{
     background:var(--paper);
@@ -445,24 +450,26 @@
     return res.json();
   }
 
-  // ═══ CARGAR DATOS: LOCAL PRIMERO ═══
+  // ═══ CARGAR DATOS: LOCAL SIEMPRE PRIMERO ═══
   async function cargarDatos() {
     if (!libroId) throw new Error('No libro');
 
-    const localLibro = localStorage.getItem(`libro-${libroId}.json`);
-    if (localLibro) {
-      try { libro = JSON.parse(localLibro); libro.id = libroId; } catch (e) {}
-    }
-    const localBib = localStorage.getItem('biblioteca-cache-v11');
-    if (localBib) {
-      try {
+    // Cargar de local
+    try {
+      const localLibro = localStorage.getItem(`libro-${libroId}.json`);
+      if (localLibro) { libro = JSON.parse(localLibro); libro.id = libroId; }
+    } catch (e) { console.warn('local libro:', e); }
+
+    try {
+      const localBib = localStorage.getItem('biblioteca-cache-v11');
+      if (localBib) {
         biblioteca = JSON.parse(localBib);
         entradaBiblioteca = biblioteca.libros.find(l => l.id === libroId);
-      } catch (e) {}
-    }
-    if (libro && entradaBiblioteca) return;
+      }
+    } catch (e) { console.warn('local bib:', e); }
 
-    if (getToken() && getGistId()) {
+    // Fallback Gist SOLO si falta algo
+    if ((!libro || !entradaBiblioteca) && getToken() && getGistId()) {
       try {
         const gist = await ghRequest('GET', `/gists/${getGistId()}`);
         if (!biblioteca) {
@@ -484,8 +491,14 @@
         }
       } catch (e) { console.warn('Gist:', e.message); }
     }
+
     if (!libro) throw new Error('Libro no encontrado');
-    if (!entradaBiblioteca) throw new Error('Entrada no encontrada');
+    if (!biblioteca) biblioteca = { version: 2, libros: [], preferencias: {} };
+    if (!entradaBiblioteca) {
+      // Crear entrada mínima si falta
+      entradaBiblioteca = { id: libroId, titulo: 'Libro', autor: '', progreso: 0, leido: false, favorito: false };
+      biblioteca.libros.push(entradaBiblioteca);
+    }
   }
 
   function dividirEnTrozos(texto, maxLen = 450) {
@@ -528,7 +541,6 @@
     return trozos.filter(t => t.length > 0);
   }
 
-  // ═══ Detectar tipo de capítulo ═══
   function tipoCapitulo(titulo) {
     const t = String(titulo||'').trim();
     if (/^(introducci[oó]n|pr[oó]logo|prefacio)/i.test(t)) return 'intro';
@@ -552,12 +564,9 @@
     let html = '';
     caps.forEach((c, i) => {
       const tipo = tipoCapitulo(c.titulo);
-      let numHtml;
-      if (tipo === 'intro') {
-        numHtml = `<div class="num toc-intro">INTRO</div>`;
-      } else {
-        numHtml = `<div class="num">${i+1}</div>`;
-      }
+      const numHtml = tipo === 'intro'
+        ? `<div class="num toc-intro">INTRO</div>`
+        : `<div class="num">${i+1}</div>`;
       html += `<div class="toc-item" data-cap="${c.id}">${numHtml}<div class="titulo-toc">${esc(c.titulo)}</div></div>`;
     });
     secs.forEach(s => {
@@ -593,6 +602,14 @@
 
     page.innerHTML = html;
     actualizarProgreso();
+
+    // Asegurar que los botones "Reanudar" estén presentes en capítulos con progreso
+    setTimeout(() => {
+      const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+      todosCaps.forEach(c => {
+        if ((c.ttsIndice || 0) > 0) actualizarBotonReanudar(c.id);
+      });
+    }, 100);
   }
 
   function renderCap(c, idx) {
@@ -600,11 +617,8 @@
     const ttsIndice = c.ttsIndice || 0;
     const leido = c.leido || false;
 
-    // Encabezado según tipo
     let headHtml = '';
-    if (tipo === 'intro') {
-      headHtml = `<h2 class="chapter-title">${esc(c.titulo)}</h2>`;
-    } else if (tipo === 'con-numero') {
+    if (tipo === 'intro' || tipo === 'con-numero') {
       headHtml = `<h2 class="chapter-title">${esc(c.titulo)}</h2>`;
     } else {
       headHtml = `<div class="chapter-num">Capítulo ${idx+1}</div><h2 class="chapter-title">${esc(c.titulo)}</h2>`;
@@ -630,6 +644,7 @@
           <option value="1.75">1.75×</option>
           <option value="2">2×</option>
         </select>
+        ${ttsIndice > 0 ? `<button class="resume-btn" data-resume="${c.id}" title="Reanudar">⏵ Reanudar (${ttsIndice+1})</button>` : ''}
         <span class="spacer"></span>
         <button class="check-leido ${leido ? 'checked' : ''}" data-check-leido="${c.id}">
           ${leido ? '✓ Leído' : 'Marcar leído'}
@@ -725,7 +740,6 @@
     limpiarTTS();
   }
 
-  // ═══ ACTUALIZAR BOTÓN "REANUDAR" DINÁMICAMENTE ═══
   function actualizarBotonReanudar(capId) {
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
     const cap = todosCaps.find(c => c.id === capId);
@@ -734,10 +748,8 @@
     if (!capEl) return;
     const bar = capEl.querySelector('.chapter-tts-bar');
     if (!bar) return;
-
     const existing = bar.querySelector('[data-resume]');
     const ttsIndice = cap.ttsIndice || 0;
-
     if (ttsIndice > 0) {
       if (!existing) {
         const btn = document.createElement('button');
@@ -817,14 +829,15 @@
     }
     if (!mejorVoz) elegirVoz();
 
+    // Marcar el fragmento ACTUAL en el capítulo antes de hablar
     if (capTTSActual) {
       destacarFragmento(capTTSActual, ttsIdx);
       const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
       const cap = todosCaps.find(c => c.id === capTTSActual);
       if (cap) cap.ttsIndice = ttsIdx;
-      scheduleGuardar();
-      // Actualizar botón reanudar dinámicamente
       actualizarBotonReanudar(capTTSActual);
+      // Guardar inmediatamente (no debounce) al iniciar cada fragmento
+      guardarProgreso();
     }
 
     const u = new SpeechSynthesisUtterance(ttsFrags[ttsIdx]);
@@ -834,6 +847,13 @@
 
     u.onend = () => {
       if (gen !== ttsGen) return;
+      // Avanzar y guardar
+      if (capTTSActual) {
+        const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
+        const cap = todosCaps.find(c => c.id === capTTSActual);
+        if (cap) cap.ttsIndice = Math.min(ttsIdx + 1, ttsFrags.length);
+        guardarProgreso();
+      }
       ttsIdx++;
       setTimeout(() => reproducirTrozo(gen), 50);
     };
@@ -847,13 +867,9 @@
     catch { pararTTS(); }
   }
 
-  function scheduleGuardar() {
-    clearTimeout(_guardarTimer);
-    _guardarTimer = setTimeout(guardarProgreso, 500);
-  }
-
+  // ═══ GUARDAR PROGRESO: robusto, escribe directo ═══
   function guardarProgreso() {
-    if (!entradaBiblioteca || !libro) return;
+    if (!libro) return;
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
     let sumaFrags = 0, totalFrags = 0;
     for (const c of todosCaps) {
@@ -862,14 +878,32 @@
       sumaFrags += Math.min(c.ttsIndice || 0, c.fragmentosPlanos.length);
     }
     const pct = totalFrags > 0 ? Math.round((sumaFrags / totalFrags) * 100) : 0;
-    entradaBiblioteca.progreso = pct;
+
+    // Actualizar directo en el array
     if (biblioteca) {
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
-      if (idx >= 0) biblioteca.libros[idx] = { ...entradaBiblioteca };
+      if (idx >= 0) {
+        biblioteca.libros[idx].progreso = pct;
+      } else if (entradaBiblioteca) {
+        entradaBiblioteca.progreso = pct;
+        biblioteca.libros.push(entradaBiblioteca);
+      }
     }
-    localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
-    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+    if (entradaBiblioteca) entradaBiblioteca.progreso = pct;
+
+    // Persistir en localStorage (síncrono)
+    try {
+      localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
+      localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+      console.log(`💾 Guardado: ${pct}% (${sumaFrags}/${totalFrags} frags)`);
+    } catch (e) {
+      console.error('❌ localStorage save error:', e);
+      toast('⚠ No se pudo guardar localmente');
+    }
+
     actualizarProgreso();
+
+    // Gist con debounce largo
     clearTimeout(window._gistTimer);
     window._gistTimer = setTimeout(guardarEnGistDebounced, 3000);
   }
@@ -979,7 +1013,19 @@
     guardarProgreso();
   }
 
-  // ═══ MODO LIBRO: column-count explícito (evita distorsión) ═══
+  // ═══ PASO DE PÁGINA CORRECTO ═══
+  function getScrollStep() {
+    const view = $('#book-view');
+    if (!view) return 0;
+    const isMobile = view.clientWidth < 900;
+    const colsVisible = isMobile ? 1 : 2;
+    const padding = isMobile ? 20 : 40;
+    const gap = isMobile ? 20 : 40;
+    const colW = Math.floor((view.clientWidth - padding * 2 - gap * (colsVisible - 1)) / colsVisible);
+    return (colW + gap) * colsVisible;
+  }
+
+  // ═══ MODO LIBRO ═══
   function applyBookMode() {
     const view = $('#book-view');
     const page = $('#book-page');
@@ -998,7 +1044,7 @@
     const colsVisible = isMobile ? 1 : 2;
     const colW = Math.floor((vw - padding * 2 - gap * (colsVisible - 1)) / colsVisible);
 
-    // PASO 1: medir con 1 columna del ancho de colW
+    // Medir con una sola columna del ancho de colW
     page.style.cssText = `
       width: ${colW}px;
       height: auto;
@@ -1013,7 +1059,6 @@
     const totalCols = Math.max(1, Math.ceil(contentH / availH));
     const totalW = totalCols * colW + Math.max(0, totalCols - 1) * gap + padding * 2;
 
-    // PASO 2: aplicar column-count EXPLÍCITO (no auto) para evitar distorsión
     page.style.cssText = `
       width: ${totalW}px;
       height: ${vh}px;
@@ -1039,16 +1084,14 @@
   function updatePageInfo() {
     const view = $('#book-view');
     if (!view || !bookMode) return;
-    const vw = view.clientWidth;
-    const isMobile = vw < 900;
-    const colsVisible = isMobile ? 1 : 2;
-    const totalScroll = Math.max(0, view.scrollWidth - vw);
-    const step = vw;
-    const totalPages = Math.max(1, Math.ceil(totalScroll / step) + 1);
-    const currentPage = Math.min(totalPages, Math.round(view.scrollLeft / step) + 1);
-    $('#pageInfo').textContent = `${currentPage} / ${totalPages}`;
-    $('#btnPrevPage').disabled = currentPage <= 1;
-    $('#btnNextPage').disabled = currentPage >= totalPages;
+    const step = getScrollStep();
+    if (step <= 0) return;
+    const scrollable = Math.max(0, view.scrollWidth - view.clientWidth);
+    const totalSpreads = Math.max(1, Math.ceil(scrollable / step) + 1);
+    const currentSpread = Math.min(totalSpreads, Math.round(view.scrollLeft / step) + 1);
+    $('#pageInfo').textContent = `${currentSpread} / ${totalSpreads}`;
+    $('#btnPrevPage').disabled = currentSpread <= 1;
+    $('#btnNextPage').disabled = currentSpread >= totalSpreads;
   }
 
   document.body.addEventListener('click', (e) => {
@@ -1087,11 +1130,9 @@
       if (ttsActivo && !ttsPausado) {
         try { window.speechSynthesis.pause(); } catch {}
         ttsPausado = true;
-        // Actualizar botón reanudar y guardar progreso
-        if (capTTSActual) {
-          guardarProgreso();
-          actualizarBotonReanudar(capTTSActual);
-        }
+        // Guardar INMEDIATAMENTE al pausar
+        guardarProgreso();
+        if (capTTSActual) actualizarBotonReanudar(capTTSActual);
       } else if (ttsPausado) {
         try { window.speechSynthesis.resume(); } catch {}
         ttsPausado = false;
@@ -1101,7 +1142,7 @@
 
     const stopBtn = e.target.closest('[data-tts-stop]');
     if (stopBtn) {
-      // Guardar progreso ANTES de parar
+      // Guardar INMEDIATAMENTE al detener
       if (capTTSActual) {
         guardarProgreso();
         const capId = capTTSActual;
@@ -1182,12 +1223,14 @@
 
   $('#btnPrevPage').addEventListener('click', () => {
     const view = $('#book-view');
-    view.scrollBy({ left: -view.clientWidth, behavior: 'smooth' });
+    const step = getScrollStep();
+    view.scrollBy({ left: -step, behavior: 'smooth' });
   });
 
   $('#btnNextPage').addEventListener('click', () => {
     const view = $('#book-view');
-    view.scrollBy({ left: view.clientWidth, behavior: 'smooth' });
+    const step = getScrollStep();
+    view.scrollBy({ left: step, behavior: 'smooth' });
   });
 
   $('#book-view').addEventListener('scroll', updatePageInfo);
@@ -1197,9 +1240,11 @@
   });
 
   $('#btnBack').addEventListener('click', async () => {
-    pararTTS();
+    // Guardar ANTES de parar
     guardarProgreso();
-    await new Promise(r => setTimeout(r, 200));
+    pararTTS();
+    // Esperar un momento para asegurar localStorage
+    await new Promise(r => setTimeout(r, 100));
     window.location.href = 'index.html';
   });
 
@@ -1211,7 +1256,12 @@
   });
 
   window.addEventListener('pagehide', () => {
-    if (ttsActivo) guardarProgreso();
+    // Guardar siempre (aunque no esté activo, por si acaso)
+    try { guardarProgreso(); } catch(e) {}
+  });
+
+  window.addEventListener('beforeunload', () => {
+    try { guardarProgreso(); } catch(e) {}
   });
 
   (async function init() {
@@ -1220,8 +1270,9 @@
       renderHeader();
       renderTOC();
       renderContenido();
-      console.log('✅ lector.html v16 cargado');
+      console.log('✅ lector.html v17 cargado. Progreso guardado:', entradaBiblioteca?.progreso);
 
+      // Auto-scroll al capítulo con progreso
       setTimeout(() => {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
         const capActivo = todosCaps.find(c => (c.ttsIndice || 0) > 0);
@@ -1234,6 +1285,7 @@
         }
       }, 400);
     } catch (e) {
+      console.error('Init error:', e);
       $('#book-page').innerHTML = `<div class="error">
         <h2>Error</h2>
         <p>${esc(e.message)}</p>

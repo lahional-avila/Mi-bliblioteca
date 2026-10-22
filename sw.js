@@ -1,4 +1,4 @@
-const CACHE_NAME = 'biblioteca-v19';
+const CACHE_NAME = 'biblioteca-v20';
 const ASSETS = ['./', './index.html', './lector.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {

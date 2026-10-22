@@ -34,7 +34,6 @@
     font-family:var(--sans); line-height:1.6; min-height:100vh;
     -webkit-font-smoothing:antialiased;
   }
-
   .topbar{
     position:sticky; top:0; z-index:50;
     background:color-mix(in srgb, var(--paper) 92%, transparent);
@@ -110,7 +109,6 @@
   .toc-item .titulo-toc{flex:1; min-width:0;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; line-height:1.3;}
 
-  /* Floating bar in book mode */
   .book-floating-bar{
     display:none; position:fixed; top:70px; left:50%; transform:translateX(-50%);
     z-index:48; background:var(--paper); border:1px solid var(--border);
@@ -171,7 +169,6 @@
   body.book-mode .chapter-tts-bar,
   body.book-mode .chapter-section h3{ break-inside:avoid; break-after:avoid; }
 
-  /* Chapter collapse/expand */
   .chapter{ margin-bottom:24px; scroll-margin-top:80px; position:relative; border-bottom:1px solid var(--border); padding-bottom:16px; }
   .chapter-header{
     display:flex; align-items:center; gap:10px; padding:10px 0;
@@ -437,6 +434,8 @@
   let ttsGen = 0;
   let capTTSActual = null;
   let bookMode = false;
+  let currentPageIdx = 0;   // ⭐ página lógica
+  let isAnimatingPage = false; // ⭐ evitar scroll listener sobrescriba
   let _guardarTimer = null;
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -673,7 +672,6 @@
     const isActive = ttsIndice > 0;
     const capClass = isActive ? '' : 'collapsed';
 
-    // Build body first (populates fragmentosPlanos)
     c.fragmentosPlanos = [];
     c._fragOffset = 0;
 
@@ -875,7 +873,6 @@
     ttsActivo = true;
     capTTSActual = capId;
 
-    // Marcar enProgreso=true para el filtro de index
     if (entradaBiblioteca) {
       entradaBiblioteca.enProgreso = true;
       entradaBiblioteca.fecha = Date.now();
@@ -1026,8 +1023,8 @@
     try {
       localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
       localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
-      console.log(`💾 Guardado: ${pct}% (${sumaFrags}/${totalFrags} frags) enProgreso=${enProgreso}`);
-    } catch (e) { console.error('localStorage save:', e); }
+      console.log(`💾 ${pct}% (${sumaFrags}/${totalFrags}) enProgreso=${enProgreso}`);
+    } catch (e) { console.error('localStorage:', e); }
 
     actualizarProgreso();
     clearTimeout(window._gistTimer);
@@ -1043,8 +1040,8 @@
           'biblioteca.json': { content: JSON.stringify(biblioteca) }
         }
       });
-      console.log('✅ Progreso al Gist');
-    } catch (e) { console.warn('Gist save:', e.message); }
+      console.log('✅ Gist actualizado');
+    } catch (e) { console.warn('Gist:', e.message); }
   }
 
   function actualizarProgreso() {
@@ -1139,6 +1136,7 @@
     guardarProgreso();
   }
 
+  // ═══ HELPERS DE PAGINACIÓN ═══
   function getScrollStep() {
     const view = $('#book-view');
     if (!view) return 0;
@@ -1148,6 +1146,20 @@
     const gap = isMobile ? 20 : 40;
     const colW = Math.floor((view.clientWidth - padding * 2 - gap * (colsVisible - 1)) / colsVisible);
     return (colW + gap) * colsVisible;
+  }
+
+  function goToPage(index) {
+    const view = $('#book-view');
+    const step = getScrollStep();
+    if (!view || step <= 0) return;
+    const maxLeft = Math.max(0, view.scrollWidth - view.clientWidth);
+    const targetLeft = Math.max(0, Math.min(maxLeft, index * step));
+    currentPageIdx = index;
+    isAnimatingPage = true;
+    view.scrollTo({ left: targetLeft, behavior: 'smooth' });
+    clearTimeout(window._pageAnimTimer);
+    window._pageAnimTimer = setTimeout(() => { isAnimatingPage = false; }, 450);
+    updatePageInfo();
   }
 
   function applyBookMode() {
@@ -1181,8 +1193,11 @@
       column-fill: auto;
     `;
 
-    setTimeout(updatePageInfo, 100);
-    setTimeout(updateFloatingBar, 200);
+    currentPageIdx = 0;
+    setTimeout(() => {
+      updatePageInfo();
+      updateFloatingBar();
+    }, 100);
   }
 
   function toggleBookMode() {
@@ -1201,10 +1216,10 @@
     if (step <= 0) return;
     const scrollable = Math.max(0, view.scrollWidth - view.clientWidth);
     const totalSpreads = Math.max(1, Math.ceil(scrollable / step) + 1);
-    const currentSpread = Math.min(totalSpreads, Math.round(view.scrollLeft / step) + 1);
-    $('#pageInfo').textContent = `${currentSpread} / ${totalSpreads}`;
-    $('#btnPrevPage').disabled = currentSpread <= 1;
-    $('#btnNextPage').disabled = currentSpread >= totalSpreads;
+    const displayIdx = Math.min(totalSpreads, currentPageIdx + 1);
+    $('#pageInfo').textContent = `${displayIdx} / ${totalSpreads}`;
+    $('#btnPrevPage').disabled = currentPageIdx <= 0;
+    $('#btnNextPage').disabled = currentPageIdx >= totalSpreads - 1;
   }
 
   function getVisibleChapterId() {
@@ -1246,7 +1261,15 @@
     const el = document.getElementById(`cap-${capId}`);
     if (!el) return;
     if (bookMode) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+      const view = $('#book-view');
+      const rect = el.getBoundingClientRect();
+      const viewRect = view.getBoundingClientRect();
+      const offset = rect.left - viewRect.left + view.scrollLeft;
+      view.scrollTo({ left: offset, behavior: 'smooth' });
+      isAnimatingPage = true;
+      clearTimeout(window._pageAnimTimer);
+      window._pageAnimTimer = setTimeout(() => { isAnimatingPage = false; }, 450);
+      setTimeout(updateFloatingBar, 500);
     } else {
       el.classList.remove('collapsed');
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1270,7 +1293,6 @@
   }
 
   document.body.addEventListener('click', (e) => {
-    // Chapter header toggle (only in scroll mode)
     const headerToggle = e.target.closest('.chapter-header');
     if (headerToggle && !e.target.closest('.quick-play-btn') && !bookMode) {
       const capId = headerToggle.dataset.capToggle;
@@ -1361,7 +1383,6 @@
     }
   });
 
-  // Fragment selector: change event
   document.body.addEventListener('change', (e) => {
     const sel = e.target.closest('[data-frag-select]');
     if (!sel) return;
@@ -1417,21 +1438,27 @@
 
   $('#btnMode').addEventListener('click', toggleBookMode);
 
+  // ⭐ FIX: usar goToPage con índice lógico
   $('#btnPrevPage').addEventListener('click', () => {
-    const view = $('#book-view');
-    view.scrollBy({ left: -getScrollStep(), behavior: 'smooth' });
+    goToPage(Math.max(0, currentPageIdx - 1));
   });
   $('#btnNextPage').addEventListener('click', () => {
-    const view = $('#book-view');
-    view.scrollBy({ left: getScrollStep(), behavior: 'smooth' });
+    goToPage(currentPageIdx + 1);
   });
 
   $('#book-view').addEventListener('scroll', () => {
+    // Solo sincronizar el índice si NO estamos en animación (para no sobreescribir el target)
+    if (!isAnimatingPage) {
+      const view = $('#book-view');
+      const step = getScrollStep();
+      if (step > 0) {
+        currentPageIdx = Math.round(view.scrollLeft / step);
+      }
+    }
     updatePageInfo();
     updateFloatingBar();
   });
 
-  // Floating bar controls
   $('#btnPlayCurrent').addEventListener('click', () => {
     const capId = $('#btnPlayCurrent').dataset.cap;
     if (capId) hablarCap(capId);
@@ -1462,7 +1489,6 @@
             'biblioteca.json': { content: JSON.stringify(biblioteca) }
           }
         });
-        console.log('✅ Progreso final al Gist');
       } catch (e) { console.warn('Gist final:', e.message); }
     }
     pararTTS();
@@ -1483,7 +1509,7 @@
       renderHeader();
       renderTOC();
       renderContenido();
-      console.log('✅ lector.html v19. Progreso:', entradaBiblioteca?.progreso, 'enProgreso:', entradaBiblioteca?.enProgreso);
+      console.log('✅ lector.html v20. Progreso:', entradaBiblioteca?.progreso);
 
       setTimeout(() => {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];

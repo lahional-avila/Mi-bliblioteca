@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=23" />
+<link rel="manifest" href="manifest.json?v=22" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=23').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=22').catch(()=>{}); });
   }
 </script>
 <style>
@@ -145,7 +145,7 @@
   .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%, transparent)}
   .field textarea{resize:vertical;min-height:90px;line-height:1.6;font-family:ui-monospace,Monaco,monospace;font-size:.85rem}
   .hint{font-size:.78rem;color:var(--muted);margin:0}
-  .hint code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:.72rem;border:1px solid var(--border);word-break:break-all;}
+  .hint code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:.72rem;border:1px solid var(--border)}
   .sync-status{padding:10px 12px;border-radius:10px;font-size:.85rem;display:none}
   .sync-status.ok{background:color-mix(in srgb,var(--ok) 12%, transparent);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 30%, transparent);display:block}
   .sync-status.err{background:color-mix(in srgb,var(--danger) 10%, transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 30%, transparent);display:block}
@@ -320,40 +320,27 @@
       </button>
     </header>
     <div class="modal-body">
+      <div class="hint" style="padding:14px;background:var(--surface-2);border-radius:10px;border:1px solid var(--border);line-height:1.6">
+        <strong>📖 Cargar libro</strong><br>
+        Hacé clic en <strong>"Seleccionar carpeta del libro"</strong> y elegí la carpeta que contiene:<br>
+        • <code>Resumen.txt</code> (obligatorio)<br>
+        • <code>Cover.jpg</code> (opcional, portada)<br>
+        Se cargan automáticamente al abrir.
+      </div>
+
       <div class="field">
-        <label for="addUrl">URL de la carpeta del libro</label>
-        <div style="display:flex; gap:8px;">
-          <input type="url" id="addUrl" placeholder="https://ejemplo.com/libros/mi-libro" style="flex:1" />
-          <button type="button" class="btn btn-primary" id="btnExtraerUrl" style="flex-shrink:0;white-space:nowrap">📥 Extraer</button>
-        </div>
-        <div id="fileInfo" style="font-size:.85rem;color:var(--muted);min-height:1.2em;margin-top:6px"></div>
-        <details style="margin-top:8px;font-size:.78rem;color:var(--muted)">
-          <summary style="cursor:pointer;font-weight:700">💡 ¿Cómo obtengo la URL?</summary>
-          <div style="margin-top:6px;padding:10px;background:var(--surface-2);border-radius:8px;line-height:1.7">
-            <strong>Servidor local (recomendado):</strong><br>
-            1. Abrí una terminal en la carpeta padre de tus libros<br>
-            2. Ejecutá: <code>python -m http.server 8000</code><br>
-            3. Verificá en el navegador: <code>http://localhost:8000</code><br>
-            4. Acá pegá: <code>http://localhost:8000/nombre-carpeta</code><br>
-            (o una ruta relativa: <code>/nombre-carpeta</code>)<br><br>
-            <strong>GitHub Pages:</strong><br>
-            <code>https://tuusuario.github.io/turepo/libros/carpeta</code><br><br>
-            <strong>❌ No funciona:</strong> <code>file:///C:/...</code> (el navegador bloquea leer archivos locales).
-          </div>
-        </details>
+        <button type="button" class="btn btn-primary" id="btnSelectFolder" style="width:100%;padding:14px;font-size:1rem">📁 Seleccionar carpeta del libro</button>
+        <div id="fileInfo" style="font-size:.85rem;color:var(--muted);min-height:1.2em;margin-top:8px;"></div>
+        <input type="file" id="addDir" webkitdirectory style="display:none" />
       </div>
 
       <div class="field">
         <label for="addTexto">Texto completo del libro</label>
-        <textarea id="addTexto" placeholder="Se cargará automáticamente al extraer…" style="min-height:150px"></textarea>
+        <textarea id="addTexto" placeholder="El texto se cargará automáticamente al seleccionar la carpeta…" style="min-height:150px"></textarea>
       </div>
 
       <div class="field">
-        <label>Portada (si no se extrajo)</label>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-          <button type="button" class="btn btn-ghost btn-sm" id="addBuscarPortada">🔍 Buscar en Google</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="btnPegarPortada">📋 Pegar del Portapapeles</button>
-        </div>
+        <label>Portada</label>
         <div id="addCoverPreview" style="display:none; width:100px; height:140px; border-radius:6px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,.2);">
           <img src="" style="width:100%; height:100%; object-fit:cover;">
         </div>
@@ -493,6 +480,7 @@
     return res.json();
   }
 
+  // ═══ SYNC CON MERGE DE ELIMINADOS ═══
   async function sincronizarConGist(silencioso = false) {
     if (!tieneSync()) { if (!silencioso) toast('Configurá el sync primero'); return false; }
     if (syncEnProgreso) { if (!silencioso) toast('Sync en progreso…'); return false; }
@@ -501,15 +489,17 @@
     btn.classList.add('sync-loading');
 
     try {
+      console.log('🔄 Sync iniciando…');
       const gist = await ghRequest('GET', `/gists/${getGistId()}`);
 
+      // 1. Fetch & merge eliminados.json
       const elFile = gist.files && gist.files['eliminados.json'];
       let gistElim = [];
       if (elFile) {
         try {
           const c = elFile.truncated ? await (await fetchConTimeout(elFile.raw_url)).text() : elFile.content;
           gistElim = JSON.parse(c);
-        } catch (e) { console.warn('eliminados.json:', e); }
+        } catch (e) { console.warn('eliminados.json parse:', e); }
       }
       const localElim = getEliminados();
       const mergedElim = Array.from(new Set([...localElim, ...gistElim]));
@@ -517,11 +507,15 @@
       const newDeletions = mergedElim.filter(id => !gistElimSet.has(id));
       const elimChanged = mergedElim.length !== localElim.length;
       localStorage.setItem(LS_ELIMINADOS, JSON.stringify(mergedElim));
+      console.log(`📥 eliminados: local=${localElim.length} gist=${gistElim.length} merged=${mergedElim.length}`);
 
+      // 2. Filter local books
       const beforeCount = biblioteca.libros.length;
       biblioteca.libros = biblioteca.libros.filter(l => !mergedElim.includes(l.id));
       let cambiosLocal = biblioteca.libros.length < beforeCount;
+      if (cambiosLocal) console.log(`🗑️ Removidos ${beforeCount - biblioteca.libros.length} libros eliminados`);
 
+      // 3. Fetch & merge biblioteca.json
       const bibFile = gist.files && gist.files['biblioteca.json'];
       if (bibFile) {
         const c = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
@@ -534,6 +528,7 @@
           if (!local) {
             biblioteca.libros.push(gistLibro);
             cambiosLocal = true;
+            console.log(`  ➕ Agregado: ${gistLibro.titulo}`);
           } else {
             const pLocal = Number(local.progreso) || 0;
             const pGist = Number(gistLibro.progreso) || 0;
@@ -560,9 +555,11 @@
         }
       }
 
+      // 4. Save if anything changed
       if (cambiosLocal || elimChanged || newDeletions.length > 0) {
         const fileDeletes = {};
         newDeletions.forEach(id => { fileDeletes[`libro-${id}.json`] = null; });
+        console.log(`📤 Subiendo al Gist (${newDeletions.length} borrados a propagar)`);
         await guardarBiblioteca(true, fileDeletes);
       }
 
@@ -594,6 +591,7 @@
     if (biblioteca.libros.length === 0) biblioteca = { version: 2, libros: [], preferencias: {} };
   }
 
+  // ═══ GUARDAR: incluye eliminados.json ═══
   async function guardarBiblioteca(silencioso = false, extraFiles = {}) {
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
     if (!tieneSync()) return true;
@@ -754,8 +752,8 @@
   }
 
   function abrirAdd() {
-    $('#addUrl').value = '';
     $('#addTexto').value = '';
+    $('#addDir').value = '';
     $('#addPreview').style.display = 'none';
     $('#addPreview').innerHTML = '';
     $('#addCoverPreview').style.display = 'none';
@@ -866,160 +864,94 @@
     localStorage.removeItem(`libro-${l.id}.json`);
     biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
     localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-    addEliminado(l.id);
+    addEliminado(l.id);  // <-- a LS_ELIMINADOS
     $('#reviewModal').close();
     render();
     toast('Libro eliminado');
     if (tieneSync()) {
       try {
-        await eliminarLibroDeGist(l.id);
-        await guardarBiblioteca(true);
+        await eliminarLibroDeGist(l.id);        // borra libro-X.json
+        await guardarBiblioteca(true);          // guarda biblioteca.json + eliminados.json
       } catch (e) { toast('⚠ Local OK, Gist falló'); }
     }
   }
 
-  // ═══ EXTRAER DESDE URL ═══
-  function normalizeFolderUrl(input) {
-    let url = String(input || '').trim();
-    if (!url) throw new Error('Ingresá una URL');
-
-    url = url.replace(/\/(Resumen|resumen|Cover|cover)\.(txt|jpg|jpeg|png|webp)$/i, '');
-    url = url.replace(/\/+$/, '');
-
-    let absolute;
-    if (/^[a-z]+:\/\//i.test(url)) {
-      absolute = url;
-    } else if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../') || /^[\w.-]+(\/|$)/.test(url) && !/^[\w.-]+\.\w+$/.test(url)) {
-      try { absolute = new URL(url, location.href).href; }
-      catch (e) { throw new Error('Ruta inválida: ' + input); }
-    } else {
-      try { absolute = new URL('https://' + url).href; }
-      catch (e) { throw new Error('URL inválida: ' + input); }
-    }
-
-    const parsed = new URL(absolute);
-    if (parsed.protocol === 'file:') {
-      throw new Error('Las rutas file:// no se pueden leer por seguridad del navegador.\n\nUsá un servidor local:\n1. Terminal en la carpeta padre de tus libros\n2. python -m http.server 8000\n3. Abrí: http://localhost:8000\n4. Acá pegá: http://localhost:8000/nombre-carpeta');
-    }
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      throw new Error('Protocolo no soportado: ' + parsed.protocol);
-    }
-    return parsed.href.replace(/\/+$/, '');
-  }
-
-  function buildChildUrl(baseUrl, filename) {
-    const u = new URL(baseUrl);
-    let path = u.pathname.replace(/\/+$/, '') + '/';
-    u.pathname = path + encodeURIComponent(filename);
-    return u.href;
-  }
-
-  async function fetchTextFile(url) {
+  /* ═══ CARGA DESDE CARPETA: Resumen.txt + Cover.jpg automático ═══ */
+  async function loadBookFromFiles(txtFile, coverFile) {
     try {
-      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) return { ok: false, reason: 'HTTP ' + res.status };
-      const text = await res.text();
-      const head = text.substring(0, 300).trim().toLowerCase();
-      if (head.startsWith('<!doctype') || head.startsWith('<html')) {
-        return { ok: false, reason: 'HTML (404?)' };
-      }
-      if (text.length < 30) return { ok: false, reason: 'vacío' };
-      return { ok: true, text };
-    } catch (e) {
-      return { ok: false, reason: e.message };
-    }
-  }
-
-  async function fetchImageFile(url) {
-    try {
-      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) return null;
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      if (!ct.startsWith('image/')) return null;
-      const blob = await res.blob();
-      if (blob.size < 500) return null;
-      return blob;
-    } catch (e) { return null; }
-  }
-
-  async function extraerDesdeURL(urlInput) {
-    const base = normalizeFolderUrl(urlInput);
-    console.log('🔍 Extrayendo desde:', base);
-
-    const txtCandidates = [
-      buildChildUrl(base, 'Resumen.txt'),
-      buildChildUrl(base, 'resumen.txt'),
-    ];
-    let txtContent = null, txtUrlUsed = null;
-    const errors = [];
-    for (const url of txtCandidates) {
-      const r = await fetchTextFile(url);
-      if (r.ok) { txtContent = r.text; txtUrlUsed = url; break; }
-      errors.push(`${url} → ${r.reason}`);
-    }
-    if (!txtContent) {
-      throw new Error(
-        'No se pudo leer Resumen.txt.\n\n' +
-        'Verificá:\n' +
-        '• La URL sea correcta y accesible\n' +
-        '• El servidor permita CORS (Access-Control-Allow-Origin)\n' +
-        '• Exista Resumen.txt en esa carpeta\n\n' +
-        'Intenté:\n' + errors.join('\n')
-      );
-    }
-
-    const coverCandidates = [
-      'Cover.jpg','cover.jpg','Cover.jpeg','cover.jpeg',
-      'Cover.png','cover.png','Cover.webp','cover.webp'
-    ].map(f => buildChildUrl(base, f));
-
-    let coverBlob = null, coverUrlUsed = null;
-    for (const url of coverCandidates) {
-      const b = await fetchImageFile(url);
-      if (b) { coverBlob = b; coverUrlUsed = url; break; }
-    }
-
-    return { txtContent, txtUrlUsed, coverBlob, coverUrlUsed, base };
-  }
-
-  $('#btnExtraerUrl').addEventListener('click', async () => {
-    const url = $('#addUrl').value.trim();
-    if (!url) { toast('Pegá una URL primero'); return; }
-
-    const btn = $('#btnExtraerUrl');
-    const orig = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Extrayendo…';
-    $('#fileInfo').textContent = '';
-
-    try {
-      const result = await extraerDesdeURL(url);
-      $('#addTexto').value = result.txtContent;
+      const texto = await leerArchivoTexto(txtFile);
+      $('#addTexto').value = texto;
       analizarTexto();
-      if (result.coverBlob) {
-        coverBlob = result.coverBlob;
-        mostrarPreviewPortada(result.coverBlob);
+      if (coverFile) {
+        coverBlob = coverFile;
+        mostrarPreviewPortada(coverFile);
       }
-      const parts = [`✅ ${result.txtUrlUsed.split('/').pop()}`];
-      if (result.coverUrlUsed) parts.push(`🖼️ ${result.coverUrlUsed.split('/').pop()}`);
-      else parts.push('(sin Cover.jpg)');
-      $('#fileInfo').textContent = parts.join(' + ');
-      toast(result.coverBlob ? '✓ Libro + portada cargados' : '✓ Libro cargado (sin portada)');
-    } catch (e) {
-      console.error(e);
-      alert('❌ Error al extraer:\n\n' + e.message);
-      $('#fileInfo').textContent = '❌ ' + (e.message.split('\n')[0]);
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = orig;
+      $('#fileInfo').textContent = `📄 ${txtFile.name}${coverFile ? ' + 🖼️ ' + coverFile.name : ' (sin Cover.jpg)'}`;
+      toast(coverFile ? '✓ Resumen.txt + Cover.jpg cargados' : '✓ Resumen.txt cargado (sin portada)');
+    } catch (err) { toast('Error: ' + err.message); }
+  }
+
+  async function processDirectoryHandle(dirHandle) {
+    const txtFiles = [];
+    let coverFile = null;
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind !== 'file') continue;
+      const name = entry.name;
+      if (/\.txt$/i.test(name)) txtFiles.push({ handle: entry, name });
+      if (/^cover\.(jpg|jpeg|png|webp)$/i.test(name)) {
+        try { coverFile = await entry.getFile(); } catch (e) {}
+      }
     }
+    if (!txtFiles.length) {
+      toast('❌ No se encontró .txt en la carpeta');
+      return;
+    }
+    // Prioridad: Resumen.txt (R mayúscula, resto minúscula)
+    const selectedTxt =
+      txtFiles.find(f => f.name === 'Resumen.txt') ||
+      txtFiles.find(f => /^resumen\.txt$/i.test(f.name)) ||
+      txtFiles[0];
+    if (selectedTxt.name !== 'Resumen.txt' && !/^resumen\.txt$/i.test(selectedTxt.name)) {
+      toast('⚠ No se encontró Resumen.txt, usando ' + selectedTxt.name);
+    }
+    const txtFile = await selectedTxt.handle.getFile();
+    await loadBookFromFiles(txtFile, coverFile);
+  }
+
+  async function processFilesList(files) {
+    const txts = files.filter(f => /\.txt$/i.test(f.name));
+    const cover = files.find(f => /^cover\.(jpg|jpeg|png|webp)$/i.test(f.name));
+    if (!txts.length) { toast('❌ No se encontró .txt'); return; }
+    const txt =
+      txts.find(f => f.name === 'Resumen.txt') ||
+      txts.find(f => /^resumen\.txt$/i.test(f.name)) ||
+      txts[0];
+    await loadBookFromFiles(txt, cover);
+  }
+
+  // Único botón: seleccionar carpeta
+  $('#btnSelectFolder').addEventListener('click', async () => {
+    if ('showDirectoryPicker' in window) {
+      try {
+        const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+        await processDirectoryHandle(dirHandle);
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.warn('showDirectoryPicker:', e);
+      }
+    }
+    if ('webkitdirectory' in document.createElement('input')) {
+      $('#addDir').click();
+      return;
+    }
+    toast('❌ Tu navegador no soporta seleccionar carpetas. Actualizá Chrome/Edge/Firefox.');
   });
 
-  $('#addUrl').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      $('#btnExtraerUrl').click();
-    }
+  $('#addDir').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    await processFilesList(files);
+    e.target.value = '';
   });
 
   /* ═══ EVENTOS ═══ */
@@ -1089,39 +1021,6 @@
   $('#addCancelar').addEventListener('click', () => $('#addModal').close());
   $('#addGuardar').addEventListener('click', guardarNuevoLibro);
 
-  $('#addTexto').addEventListener('input', () => {
-    clearTimeout(window._addTextoDebounce);
-    window._addTextoDebounce = setTimeout(analizarTexto, 500);
-  });
-
-  $('#addBuscarPortada').addEventListener('click', async () => {
-    if (!parsedPreview?.titulo) {
-      analizarTexto();
-      if (!parsedPreview?.titulo) { toast('Cargá el texto primero'); return; }
-    }
-    toast('Buscando portada…');
-    try {
-      const small = await buscarPortadaAuto(parsedPreview.titulo, parsedPreview.autor);
-      if (small) { coverBlob = small; mostrarPreviewPortada(small); toast('✓ Portada encontrada'); }
-      else { toast('No se encontró portada'); }
-    } catch (e) { toast('Error: ' + e.message); }
-  });
-
-  $('#btnPegarPortada').addEventListener('click', async () => {
-    try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const imageType = item.types.find(t => t.startsWith('image/'));
-        if (imageType) {
-          const blob = await item.getType(imageType);
-          coverBlob = blob; mostrarPreviewPortada(blob); toast('✓ Imagen pegada');
-          return;
-        }
-      }
-      toast('No hay imágenes en el portapapeles');
-    } catch (e) { toast('Error: ' + e.message); }
-  });
-
   $('#syncCerrar').addEventListener('click', () => $('#syncModal').close());
   $('#syncGuardar').addEventListener('click', async () => {
     localStorage.setItem(SYNC_TOKEN_KEY, $('#syncToken').value.trim());
@@ -1165,7 +1064,7 @@
     await cargarBiblioteca();
     render();
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v23 cargado');
+    console.log('✅ index.html v22 cargado');
   })();
 
   /* ═══ HELPERS ═══ */
@@ -1253,37 +1152,6 @@
     }
     flushBuffer(); flushReseña();
     return resultado;
-  }
-
-  async function buscarPortadaAuto(titulo, autor) {
-    if (!titulo) return null;
-    const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
-    const querys = [];
-    if (autor) querys.push(`intitle:${titulo} inauthor:${autor}`);
-    querys.push(`intitle:${titulo}`);
-    for (const q of querys) {
-      try {
-        const res = await timeout(fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10`), 8000);
-        if (!res.ok) continue;
-        const data = await res.json();
-        if (!data.items) continue;
-        for (const item of data.items) {
-          const vi = item.volumeInfo;
-          if (!vi) continue;
-          let coverUrl = vi.imageLinks?.thumbnail || vi.imageLinks?.smallThumbnail;
-          if (!coverUrl && item.id) coverUrl = `https://books.google.com/books/content?id=${item.id}&printsec=frontcover&img=1&zoom=2`;
-          if (!coverUrl) continue;
-          coverUrl = coverUrl.replace(/^http:/, 'https:');
-          try {
-            const imgRes = await timeout(fetch(coverUrl, { mode: 'cors' }), 6000);
-            if (!imgRes.ok) continue;
-            const blob = await imgRes.blob();
-            if (blob.type.startsWith('image/') && blob.size > 2000) return await comprimirThumbnail(blob);
-          } catch {}
-        }
-      } catch {}
-    }
-    return null;
   }
 
   async function comprimirThumbnail(blob, maxW = 200, quality = 0.7) {

@@ -6,15 +6,14 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=24" />
+<link rel="manifest" href="manifest.json?v=25" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=24').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=25').catch(()=>{}); });
   }
 </script>
 <style>
-  /* [Los mismos estilos que ya tenías, sin cambios] */
   :root{ --bg:#f4f4f8; --surface:#ffffff; --surface-2:#fafafc; --text:#12121a; --muted:#6b7280; --border:#e7e7ee; --accent:#6366f1; --accent-2:#8b5cf6; --star:#f59e0b; --danger:#e11d48; --ok:#10b981; --fav:#ef4444; --shadow-sm:0 1px 2px rgba(16,24,40,.05); --shadow-md:0 2px 4px rgba(16,24,40,.04), 0 12px 28px -14px rgba(16,24,40,.25); --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35); --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif; --font-base: 16px; --icon-md: 20px; --card-cover-w: 72px; --card-cover-h: 100px; }
   [data-theme="dark"]{ --bg:#0a0a10; --surface:#14141d; --surface-2:#1a1a24; --text:#f2f2f7; --muted:#9aa0ae; --border:#262632; --accent:#818cf8; --accent-2:#a78bfa; --shadow-sm:0 1px 2px rgba(0,0,0,.5); --shadow-md:0 2px 4px rgba(0,0,0,.35), 0 14px 32px -16px rgba(0,0,0,.9); --shadow-lg:0 30px 70px -20px rgba(0,0,0,.9); }
   *{box-sizing:border-box} html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
@@ -379,6 +378,7 @@
   let parsedPreview = null;
   let coverBlob = null;
   let syncEnProgreso = false;
+  let operacionCritica = false;
   let db = null;
 
   const CATEGORIAS = [
@@ -402,6 +402,24 @@
   function getCat(id) { return CATEGORIAS.find(c => c.id === id) || CATEGORIAS[0]; }
   function colorLibro(l) { const c = getCat(l.categoria); return [c.c1, c.c2]; }
 
+  // ── Limpieza de markdown del contenido cargado ──
+  function limpiarMarkdown(texto) {
+    if (!texto) return '';
+    let t = String(texto);
+    t = t.replace(/\*\*([^*]+)\*\*/g, '$1');
+    t = t.replace(/__([^_]+)__/g, '$1');
+    t = t.replace(/(^|\s)\*([^*\n]+)\*(?=\s|$|[.,;:!?])/g, '$1$2');
+    t = t.replace(/(^|\s)_([^_\n]+)_(?=\s|$|[.,;:!?])/g, '$1$2');
+    t = t.replace(/^#{1,6}\s+/gm, '');
+    t = t.replace(/^\s*[-*_]{3,}\s*$/gm, '');
+    t = t.replace(/^>\s?/gm, '');
+    t = t.replace(/^\s*[-*+]\s+/gm, '• ');
+    t = t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    t = t.replace(/`([^`]+)`/g, '$1');
+    t = t.replace(/\n{3,}/g, '\n\n');
+    return t.trim();
+  }
+
   let toastTimer = null;
   function toast(msg) {
     const el = $('#toast');
@@ -411,134 +429,85 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2300);
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // INDEXEDDB: API similar a localStorage (get/set/remove)
-  // ═══════════════════════════════════════════════════════════════
+  // ═══ INDEXEDDB ═══
   function openDB() {
     return new Promise((resolve, reject) => {
       if (db) return resolve(db);
       const req = indexedDB.open(IDB_NAME, IDB_VERSION);
       req.onupgradeneeded = (e) => {
         const database = e.target.result;
-        if (!database.objectStoreNames.contains(IDB_STORE)) {
-          database.createObjectStore(IDB_STORE);
-        }
+        if (!database.objectStoreNames.contains(IDB_STORE)) database.createObjectStore(IDB_STORE);
       };
       req.onsuccess = (e) => { db = e.target.result; resolve(db); };
       req.onerror = () => reject(req.error);
     });
   }
-
   async function idbGet(key) {
     const database = await openDB();
     return new Promise((resolve, reject) => {
       const tx = database.transaction(IDB_STORE, 'readonly');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.get(key);
+      const req = tx.objectStore(IDB_STORE).get(key);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
   }
-
   async function idbSet(key, value) {
     const database = await openDB();
     return new Promise((resolve, reject) => {
       const tx = database.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.put(value, key);
+      const req = tx.objectStore(IDB_STORE).put(value, key);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   }
-
   async function idbRemove(key) {
     const database = await openDB();
     return new Promise((resolve, reject) => {
       const tx = database.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.delete(key);
+      const req = tx.objectStore(IDB_STORE).delete(key);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
   }
-
   async function idbKeys() {
     const database = await openDB();
     return new Promise((resolve, reject) => {
       const tx = database.transaction(IDB_STORE, 'readonly');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.getAllKeys();
+      const req = tx.objectStore(IDB_STORE).getAllKeys();
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // MIGRACIÓN AUTOMÁTICA: localStorage → IndexedDB
-  // ═══════════════════════════════════════════════════════════════
+  // ═══ MIGRACIÓN localStorage → IndexedDB ═══
   async function migrarLocalStorageAIndexedDB() {
     try {
       const keys = await idbKeys();
-      const yaMigrado = keys.includes('__migrado_v24');
-      if (yaMigrado) {
-        console.log('✅ Migración ya realizada previamente');
-        return;
-      }
-
-      console.log('🔄 Iniciando migración de localStorage a IndexedDB…');
+      if (keys.includes('__migrado_v24')) return;
       let migratedCount = 0;
-
       const bibCache = localStorage.getItem(LS_CACHE_BIB);
-      if (bibCache) {
-        await idbSet(LS_CACHE_BIB, bibCache);
-        migratedCount++;
-      }
-
+      if (bibCache) { await idbSet(LS_CACHE_BIB, bibCache); migratedCount++; }
       const eliminados = localStorage.getItem(LS_ELIMINADOS);
-      if (eliminados) {
-        await idbSet(LS_ELIMINADOS, eliminados);
-        migratedCount++;
-      }
-
+      if (eliminados) { await idbSet(LS_ELIMINADOS, eliminados); migratedCount++; }
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('libro-')) {
           const val = localStorage.getItem(key);
-          if (val) {
-            await idbSet(key, val);
-            migratedCount++;
-          }
+          if (val) { await idbSet(key, val); migratedCount++; }
         }
       }
-
       await idbSet('__migrado_v24', 'true');
-      console.log(`✅ Migración completada: ${migratedCount} elementos movidos a IndexedDB`);
-
-      if (migratedCount > 0) {
-        toast('✓ Datos migrados a IndexedDB (más espacio)');
-      }
-    } catch (e) {
-      console.warn('⚠ Error en migración:', e);
-    }
+      if (migratedCount > 0) toast('✓ Datos migrados a IndexedDB');
+    } catch (e) { console.warn('Migración:', e); }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // PERSISTENCIA: solicitar almacenamiento persistente
-  // ═══════════════════════════════════════════════════════════════
   async function solicitarPersistencia() {
     if (navigator.storage && navigator.storage.persist) {
-      const granted = await navigator.storage.persist();
-      console.log(`📦 Almacenamiento persistente: ${granted ? '✓ concedido' : '⚠ no concedido'}`);
-      if (granted) {
-        const estimate = await navigator.storage.estimate();
-        console.log(`📊 Cuota estimada: ${(estimate.quota / 1024 / 1024).toFixed(1)} MB`);
-      }
+      try { await navigator.storage.persist(); } catch {}
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // HELPERS DE SYNC
-  // ═══════════════════════════════════════════════════════════════
+  // ═══ SYNC HELPERS ═══
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
   function tieneSync() { return getToken() && getGistId(); }
@@ -591,6 +560,7 @@
   }
 
   async function sincronizarConGist(silencioso = false) {
+    if (operacionCritica) { if (!silencioso) toast('Operación en curso…'); return false; }
     if (!tieneSync()) { if (!silencioso) toast('Configurá el sync primero'); return false; }
     if (syncEnProgreso) { if (!silencioso) toast('Sync en progreso…'); return false; }
     syncEnProgreso = true;
@@ -598,9 +568,7 @@
     btn.classList.add('sync-loading');
 
     try {
-      console.log('🔄 Sync iniciando…');
       const gist = await ghRequest('GET', `/gists/${getGistId()}`);
-
       const elFile = gist.files && gist.files['eliminados.json'];
       let gistElim = [];
       if (elFile) {
@@ -625,14 +593,11 @@
         const c = bibFile.truncated ? await (await fetchConTimeout(bibFile.raw_url)).text() : bibFile.content;
         const gistData = JSON.parse(c);
         const mapaLocal = new Map(biblioteca.libros.map(l => [l.id, l]));
-
         for (const gistLibro of gistData.libros) {
           if (mergedElim.includes(gistLibro.id)) continue;
           const local = mapaLocal.get(gistLibro.id);
-          if (!local) {
-            biblioteca.libros.push(gistLibro);
-            cambiosLocal = true;
-          } else {
+          if (!local) { biblioteca.libros.push(gistLibro); cambiosLocal = true; }
+          else {
             const pLocal = Number(local.progreso) || 0;
             const pGist = Number(gistLibro.progreso) || 0;
             const fLocal = Number(local.fecha) || 0;
@@ -685,10 +650,8 @@
         biblioteca = JSON.parse(cache);
         const eliminados = await getEliminados();
         biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
-        console.log(`📚 Cargados ${biblioteca.libros.length} libros desde IndexedDB`);
       }
     } catch (e) { console.warn('Error cargando de IndexedDB:', e); }
-
     if (tieneSync()) await sincronizarConGist(true);
     if (biblioteca.libros.length === 0) biblioteca = { version: 2, libros: [], preferencias: {} };
   }
@@ -717,13 +680,6 @@
     if (!tieneSync()) return;
     await ghRequest('PATCH', `/gists/${getGistId()}`, {
       files: { [`libro-${libroId}.json`]: { content: JSON.stringify(contenidoLibro) } }
-    });
-  }
-
-  async function eliminarLibroDeGist(libroId) {
-    if (!tieneSync()) return;
-    await ghRequest('PATCH', `/gists/${getGistId()}`, {
-      files: { [`libro-${libroId}.json`]: null }
     });
   }
 
@@ -879,19 +835,40 @@
     if (!texto) return;
     try {
       const parsed = parsearTextoEstructurado(texto);
-      const totalCaps = (parsed.capitulos.length || 0) + parsed.secciones.reduce((a, s) => a + (s.capitulos?.length || 0), 0);
+      const allCaps = [...(parsed.capitulos||[]), ...(parsed.secciones||[]).flatMap(s => s.capitulos || [])];
+      const totalCaps = allCaps.length;
       if (!parsed.titulo && totalCaps === 0) return;
       parsedPreview = parsed;
+
+      const warnings = [];
+      if (!parsed.titulo) warnings.push('⚠ Sin título detectado');
+      if (!parsed.autor) warnings.push('⚠ Sin autor detectado');
+      if (!parsed.reseña) warnings.push('⚠ Sin reseña (la tarjeta aparecerá sin texto)');
+      if (totalCaps === 0) warnings.push('⚠ No se detectaron capítulos (usá ## Título)');
+      allCaps.forEach(c => {
+        const tiene = (c.resumen && c.resumen.trim()) ||
+                      (c.puntos && c.puntos.trim()) ||
+                      (c.aplicacion && c.aplicacion.trim()) ||
+                      (c.enseñanza && c.enseñanza.trim()) ||
+                      (c.preguntas && c.preguntas.length);
+        if (!tiene) warnings.push(`⚠ Capítulo «${c.titulo}» sin contenido`);
+      });
+
       let html = `<div style="font-size:.85rem;line-height:1.6">
         <strong>✓ Detectado:</strong><br>
         📖 ${esc(parsed.titulo || '(sin título)')}<br>
         ✍️ ${esc(parsed.autor || '(sin autor)')}<br>
         📚 ${totalCaps} capítulo${totalCaps === 1 ? '' : 's'}<br>
-        ${parsed.reseña ? '📝 Reseña OK' : '⚠️ Sin reseña'}
-      </div>`;
+        ${parsed.reseña ? '📝 Reseña OK' : '⚠️ Sin reseña'}`;
+      if (warnings.length) {
+        html += `<div style="margin-top:10px;padding:10px;background:color-mix(in srgb,var(--danger) 10%, transparent);border:1px solid color-mix(in srgb,var(--danger) 30%, transparent);border-radius:8px;color:var(--danger);font-weight:600;font-size:.8rem">
+          ${warnings.map(w => `<div>${esc(w)}</div>`).join('')}
+        </div>`;
+      }
+      html += `</div>`;
       $('#addPreview').innerHTML = html;
       $('#addPreview').style.display = 'block';
-      toast('✓ Analizado');
+      toast(warnings.length ? `⚠ ${warnings.length} aviso(s)` : '✓ Analizado');
     } catch (e) { console.warn(e); }
   }
 
@@ -907,10 +884,22 @@
       analizarTexto();
       if (!parsedPreview) { toast('No hay texto válido'); return; }
     }
+    const parsed = parsedPreview;
+    const allCaps = [...(parsed.capitulos||[]), ...(parsed.secciones||[]).flatMap(s => s.capitulos || [])];
+    const vacios = allCaps.filter(c => {
+      return !(c.resumen && c.resumen.trim()) &&
+             !(c.puntos && c.puntos.trim()) &&
+             !(c.aplicacion && c.aplicacion.trim()) &&
+             !(c.enseñanza && c.enseñanza.trim()) &&
+             !(c.preguntas && c.preguntas.length);
+    });
+    if (vacios.length) {
+      const ok = confirm(`Hay ${vacios.length} capítulo(s) sin contenido.\n\n${vacios.map(c => '• ' + c.titulo).join('\n')}\n\n¿Guardar igual?`);
+      if (!ok) return;
+    }
     const btn = $('#addGuardar');
     btn.disabled = true; btn.textContent = 'Guardando…';
     try {
-      const parsed = parsedPreview;
       const nuevoId = uid();
       let thumbnail = null;
       if (coverBlob) {
@@ -962,22 +951,42 @@
     if (!libroActualReview) return;
     const l = libroActualReview;
     if (!confirm(`¿Eliminar «${l.titulo}»?`)) return;
-    await idbRemove(`libro-${l.id}`);
-    biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
-    await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
-    await addEliminado(l.id);
-    $('#reviewModal').close();
-    render();
-    toast('Libro eliminado');
-    if (tieneSync()) {
-      try {
-        await eliminarLibroDeGist(l.id);
-        await guardarBiblioteca(true);
-      } catch (e) { toast('⚠ Local OK, Gist falló'); }
+    operacionCritica = true;
+    try {
+      // 1. Tombstone PRIMERO
+      await addEliminado(l.id);
+      // 2. Borrar localmente
+      biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
+      await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
+      await idbRemove(`libro-${l.id}`);
+      // 3. PATCH atómico al Gist
+      if (tieneSync()) {
+        try {
+          const eliminados = await getEliminados();
+          await ghRequest('PATCH', `/gists/${getGistId()}`, {
+            files: {
+              [`libro-${l.id}.json`]: null,
+              'biblioteca.json': { content: JSON.stringify(biblioteca, null, 2) },
+              'eliminados.json': { content: JSON.stringify(eliminados) }
+            }
+          });
+          toast('✓ Eliminado y sincronizado');
+        } catch (e) {
+          toast('⚠ Eliminado local, Gist falló');
+        }
+      } else {
+        toast('✓ Libro eliminado');
+      }
+      $('#reviewModal').close();
+      render();
+    } catch (e) {
+      toast('Error: ' + e.message);
+    } finally {
+      operacionCritica = false;
     }
   }
 
-  /* ═══ CARGA DESDE CARPETA ═══ */
+  // ═══ CARGA DESDE CARPETA ═══
   async function loadBookFromFiles(txtFile, coverFile) {
     try {
       const texto = await leerArchivoTexto(txtFile);
@@ -1003,17 +1012,9 @@
         try { coverFile = await entry.getFile(); } catch (e) {}
       }
     }
-    if (!txtFiles.length) {
-      toast('❌ No se encontró .txt en la carpeta');
-      return;
-    }
-    const selectedTxt =
-      txtFiles.find(f => f.name === 'Resumen.txt') ||
-      txtFiles.find(f => /^resumen\.txt$/i.test(f.name)) ||
-      txtFiles[0];
-    if (selectedTxt.name !== 'Resumen.txt' && !/^resumen\.txt$/i.test(selectedTxt.name)) {
-      toast('⚠ No se encontró Resumen.txt, usando ' + selectedTxt.name);
-    }
+    if (!txtFiles.length) { toast('❌ No se encontró .txt en la carpeta'); return; }
+    const selectedTxt = txtFiles.find(f => f.name === 'Resumen.txt') ||
+                        txtFiles.find(f => /^resumen\.txt$/i.test(f.name)) || txtFiles[0];
     const txtFile = await selectedTxt.handle.getFile();
     await loadBookFromFiles(txtFile, coverFile);
   }
@@ -1022,10 +1023,8 @@
     const txts = files.filter(f => /\.txt$/i.test(f.name));
     const cover = files.find(f => /^cover\.(jpg|jpeg|png|webp)$/i.test(f.name));
     if (!txts.length) { toast('❌ No se encontró .txt'); return; }
-    const txt =
-      txts.find(f => f.name === 'Resumen.txt') ||
-      txts.find(f => /^resumen\.txt$/i.test(f.name)) ||
-      txts[0];
+    const txt = txts.find(f => f.name === 'Resumen.txt') ||
+                txts.find(f => /^resumen\.txt$/i.test(f.name)) || txts[0];
     await loadBookFromFiles(txt, cover);
   }
 
@@ -1040,11 +1039,8 @@
         console.warn('showDirectoryPicker:', e);
       }
     }
-    if ('webkitdirectory' in document.createElement('input')) {
-      $('#addDir').click();
-      return;
-    }
-    toast('❌ Tu navegador no soporta seleccionar carpetas. Actualizá Chrome/Edge/Firefox.');
+    if ('webkitdirectory' in document.createElement('input')) { $('#addDir').click(); return; }
+    toast('❌ Tu navegador no soporta seleccionar carpetas.');
   });
 
   $('#addDir').addEventListener('change', async (e) => {
@@ -1053,7 +1049,7 @@
     e.target.value = '';
   });
 
-  /* ═══ EVENTOS ═══ */
+  // ═══ EVENTOS ═══
   $('#grid').addEventListener('click', (e) => {
     const playBtn = e.target.closest('.card-play');
     if (playBtn) {
@@ -1158,10 +1154,10 @@
   });
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && tieneSync()) sincronizarConGist(true).then(() => render());
+    if (!document.hidden && tieneSync() && !operacionCritica) sincronizarConGist(true).then(() => render());
   });
   window.addEventListener('focus', () => {
-    if (tieneSync()) sincronizarConGist(true).then(() => render());
+    if (tieneSync() && !operacionCritica) sincronizarConGist(true).then(() => render());
   });
 
   (async function init() {
@@ -1170,48 +1166,50 @@
     await solicitarPersistencia();
     await cargarBiblioteca();
     render();
-    console.log('✅ index.html v24 (IndexedDB) cargado');
+    console.log('✅ index.html v25');
   })();
 
-  /* ═══ HELPERS ═══ */
+  // ═══ PARSER ═══
   function parsearTextoEstructurado(texto) {
     const lineas = texto.split('\n');
     const resultado = { titulo: '', autor: '', año: '', categoria: 'general', reseña: '', capitulos: [], secciones: [] };
-    let actual = null, subActual = null, buffer = [], enReseña = false, reseñaBuffer = [];
+    let actual = null, subActual = null, buffer = [], enReseña = false, reseñaBuffer = [], yaHayCapitulos = false;
+
     function flushBuffer() {
-      if (!actual) return;
-      const txt = buffer.join('\n').trim();
-      if (!txt) return;
+      if (!actual) { buffer = []; return; }
+      let txt = limpiarMarkdown(buffer.join('\n').trim());
+      if (!txt) { buffer = []; return; }
       if (subActual === 'resumen') actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
       else if (subActual === 'puntos') actual.obj.puntos = (actual.obj.puntos ? actual.obj.puntos + '\n\n' : '') + txt;
       else if (subActual === 'aplicacion') actual.obj.aplicacion = (actual.obj.aplicacion ? actual.obj.aplicacion + '\n\n' : '') + txt;
       else if (subActual === 'enseñanza') actual.obj.enseñanza = (actual.obj.enseñanza ? actual.obj.enseñanza + '\n\n' : '') + txt;
       else if (subActual === 'preguntas') {
-        const preguntas = txt.split(/\n+/).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+        const preguntas = txt.split(/\n+/).map(l => l.replace(/^\d+[\.\)]\s*/, '').replace(/^•\s*/, '').trim()).filter(Boolean);
         actual.obj.preguntas = (actual.obj.preguntas || []).concat(preguntas);
       } else actual.obj.resumen = (actual.obj.resumen ? actual.obj.resumen + '\n\n' : '') + txt;
       buffer = [];
     }
     function flushReseña() {
-      if (enReseña && reseñaBuffer.length) resultado.reseña = reseñaBuffer.join('\n').trim();
+      if (enReseña && reseñaBuffer.length) resultado.reseña = limpiarMarkdown(reseñaBuffer.join('\n').trim());
       enReseña = false; reseñaBuffer = [];
     }
+
     for (let i = 0; i < lineas.length; i++) {
       let linea = lineas[i]; let lineaTrim = linea.trim();
+
       if (!resultado.titulo && /^\*\*[^*]+\*\*$/.test(lineaTrim)) {
         const m = lineaTrim.match(/^\*\*([^*]+)\*\*$/);
         if (m) { resultado.titulo = m[1].trim(); continue; }
       }
       const mBoldField = lineaTrim.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)$/);
-      if (mBoldField) {
-        const campo = mBoldField[1].trim(); const valor = mBoldField[2].trim();
-        lineaTrim = `${campo}: ${valor}`;
-      }
+      if (mBoldField) lineaTrim = `${mBoldField[1].trim()}: ${mBoldField[2].trim()}`;
+
       const mTitulo = lineaTrim.match(/^T[íi]tulo:\s*(.+)$/i);
       const mAutor = lineaTrim.match(/^Autor:\s*(.+)$/i);
       const mAño = lineaTrim.match(/^A[ñn]o:\s*(.+)$/i);
       const mCat = lineaTrim.match(/^Categor[íi]a:\s*(.+)$/i);
       const mReseña = lineaTrim.match(/^(Rese[ñn]a|Resumen|Sinopsis|Descripci[oó]n)(?:\s+breve)?\s*:\s*(.*)$/i);
+
       if (mTitulo) { resultado.titulo = mTitulo[1].trim(); continue; }
       if (mAutor) { resultado.autor = mAutor[1].trim(); continue; }
       if (mAño) { resultado.año = mAño[1].trim(); continue; }
@@ -1221,7 +1219,7 @@
         resultado.categoria = catEncontrada ? catEncontrada.id : 'general';
         continue;
       }
-      if (mReseña) {
+      if (mReseña && !yaHayCapitulos) {
         flushBuffer(); flushReseña(); enReseña = true;
         if (mReseña[2].trim()) reseñaBuffer.push(mReseña[2].trim());
         continue;
@@ -1239,7 +1237,9 @@
       }
       if (lineaTrim.startsWith('## ') || lineaTrim.startsWith('# ')) {
         flushBuffer(); flushReseña();
-        let titulo = lineaTrim.startsWith('## ') ? lineaTrim.slice(3).trim() : lineaTrim.slice(2).trim();
+        yaHayCapitulos = true;
+        let titulo = (lineaTrim.startsWith('## ') ? lineaTrim.slice(3).trim() : lineaTrim.slice(2).trim());
+        titulo = limpiarMarkdown(titulo);
         const esParte = /^(parte|secci[oó]n|libro)\s+/i.test(titulo);
         if (esParte) {
           const sec = { id: uid(), titulo, capitulos: [] };

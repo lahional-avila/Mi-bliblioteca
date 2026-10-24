@@ -6,47 +6,19 @@
 <meta name="theme-color" content="#6366f1" />
 <title>Mi Biblioteca Personal</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><circle cx='256' cy='256' r='248' fill='%236366f1'/><path d='M 148 168 Q 202 160 256 168 L 256 384 Q 202 376 148 384 Z' fill='%23fef9c3'/><path d='M 256 168 Q 310 160 364 168 L 364 384 Q 310 376 256 384 Z' fill='%23fde68a'/><line x1='256' y1='168' x2='256' y2='384' stroke='%2392400e' stroke-width='7'/><path d='M 336 168 L 336 268 L 350 254 L 364 268 L 364 168 Z' fill='%23ef4444'/></svg>" />
-<link rel="manifest" href="manifest.json?v=22" />
+<link rel="manifest" href="manifest.json?v=24" />
 <script>
   try { document.documentElement.dataset.theme = localStorage.getItem('tema') || 'light'; } catch(e){}
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=22').catch(()=>{}); });
+    window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js?v=24').catch(()=>{}); });
   }
 </script>
 <style>
-  :root{
-    --bg:#f4f4f8; --surface:#ffffff; --surface-2:#fafafc;
-    --text:#12121a; --muted:#6b7280; --border:#e7e7ee;
-    --accent:#6366f1; --accent-2:#8b5cf6;
-    --star:#f59e0b; --danger:#e11d48; --ok:#10b981;
-    --fav:#ef4444;
-    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
-    --shadow-md:0 2px 4px rgba(16,24,40,.04), 0 12px 28px -14px rgba(16,24,40,.25);
-    --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35);
-    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
-    --font-base: 16px; --icon-md: 20px;
-    --card-cover-w: 72px; --card-cover-h: 100px;
-  }
-  [data-theme="dark"]{
-    --bg:#0a0a10; --surface:#14141d; --surface-2:#1a1a24;
-    --text:#f2f2f7; --muted:#9aa0ae; --border:#262632;
-    --accent:#818cf8; --accent-2:#a78bfa;
-    --shadow-sm:0 1px 2px rgba(0,0,0,.5);
-    --shadow-md:0 2px 4px rgba(0,0,0,.35), 0 14px 32px -16px rgba(0,0,0,.9);
-    --shadow-lg:0 30px 70px -20px rgba(0,0,0,.9);
-  }
-  *{box-sizing:border-box}
-  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-  body{
-    margin:0;background:var(--bg);color:var(--text);line-height:1.6;
-    font-size: var(--font-base);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;
-    background-image:
-      radial-gradient(900px 500px at 12% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
-      radial-gradient(800px 500px at 92% -6%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%);
-    background-repeat:no-repeat;min-height:100vh;
-  }
+  /* [Los mismos estilos que ya tenías, sin cambios] */
+  :root{ --bg:#f4f4f8; --surface:#ffffff; --surface-2:#fafafc; --text:#12121a; --muted:#6b7280; --border:#e7e7ee; --accent:#6366f1; --accent-2:#8b5cf6; --star:#f59e0b; --danger:#e11d48; --ok:#10b981; --fav:#ef4444; --shadow-sm:0 1px 2px rgba(16,24,40,.05); --shadow-md:0 2px 4px rgba(16,24,40,.04), 0 12px 28px -14px rgba(16,24,40,.25); --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35); --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif; --font-base: 16px; --icon-md: 20px; --card-cover-w: 72px; --card-cover-h: 100px; }
+  [data-theme="dark"]{ --bg:#0a0a10; --surface:#14141d; --surface-2:#1a1a24; --text:#f2f2f7; --muted:#9aa0ae; --border:#262632; --accent:#818cf8; --accent-2:#a78bfa; --shadow-sm:0 1px 2px rgba(0,0,0,.5); --shadow-md:0 2px 4px rgba(0,0,0,.35), 0 14px 32px -16px rgba(0,0,0,.9); --shadow-lg:0 30px 70px -20px rgba(0,0,0,.9); }
+  *{box-sizing:border-box} html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{ margin:0;background:var(--bg);color:var(--text);line-height:1.6; font-size: var(--font-base); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; -webkit-font-smoothing:antialiased; background-image: radial-gradient(900px 500px at 12% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%), radial-gradient(800px 500px at 92% -6%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 70%); background-repeat:no-repeat;min-height:100vh; }
   .container{max-width:1120px;margin:0 auto;padding:0 18px}
   .topbar{position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--border);}
   .topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px}
@@ -394,6 +366,9 @@
   const SYNC_GIST_KEY = 'biblioteca-sync-gist';
   const LS_CACHE_BIB = 'biblioteca-cache-v11';
   const LS_ELIMINADOS = 'biblioteca-eliminados-v1';
+  const IDB_NAME = 'biblioteca-db';
+  const IDB_VERSION = 1;
+  const IDB_STORE = 'kv';
 
   let biblioteca = { version: 2, libros: [], preferencias: {} };
   let libroActualReview = null;
@@ -404,6 +379,7 @@
   let parsedPreview = null;
   let coverBlob = null;
   let syncEnProgreso = false;
+  let db = null;
 
   const CATEGORIAS = [
     { id:'general', nombre:'General', c1:'#6366f1', c2:'#8b5cf6' },
@@ -435,16 +411,150 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2300);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // INDEXEDDB: API similar a localStorage (get/set/remove)
+  // ═══════════════════════════════════════════════════════════════
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (db) return resolve(db);
+      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(IDB_STORE)) {
+          database.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbGet(key) {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbSet(key, value) {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.put(value, key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbRemove(key) {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbKeys() {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.getAllKeys();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // MIGRACIÓN AUTOMÁTICA: localStorage → IndexedDB
+  // ═══════════════════════════════════════════════════════════════
+  async function migrarLocalStorageAIndexedDB() {
+    try {
+      const keys = await idbKeys();
+      const yaMigrado = keys.includes('__migrado_v24');
+      if (yaMigrado) {
+        console.log('✅ Migración ya realizada previamente');
+        return;
+      }
+
+      console.log('🔄 Iniciando migración de localStorage a IndexedDB…');
+      let migratedCount = 0;
+
+      const bibCache = localStorage.getItem(LS_CACHE_BIB);
+      if (bibCache) {
+        await idbSet(LS_CACHE_BIB, bibCache);
+        migratedCount++;
+      }
+
+      const eliminados = localStorage.getItem(LS_ELIMINADOS);
+      if (eliminados) {
+        await idbSet(LS_ELIMINADOS, eliminados);
+        migratedCount++;
+      }
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('libro-')) {
+          const val = localStorage.getItem(key);
+          if (val) {
+            await idbSet(key, val);
+            migratedCount++;
+          }
+        }
+      }
+
+      await idbSet('__migrado_v24', 'true');
+      console.log(`✅ Migración completada: ${migratedCount} elementos movidos a IndexedDB`);
+
+      if (migratedCount > 0) {
+        toast('✓ Datos migrados a IndexedDB (más espacio)');
+      }
+    } catch (e) {
+      console.warn('⚠ Error en migración:', e);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // PERSISTENCIA: solicitar almacenamiento persistente
+  // ═══════════════════════════════════════════════════════════════
+  async function solicitarPersistencia() {
+    if (navigator.storage && navigator.storage.persist) {
+      const granted = await navigator.storage.persist();
+      console.log(`📦 Almacenamiento persistente: ${granted ? '✓ concedido' : '⚠ no concedido'}`);
+      if (granted) {
+        const estimate = await navigator.storage.estimate();
+        console.log(`📊 Cuota estimada: ${(estimate.quota / 1024 / 1024).toFixed(1)} MB`);
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // HELPERS DE SYNC
+  // ═══════════════════════════════════════════════════════════════
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
   function tieneSync() { return getToken() && getGistId(); }
 
-  function getEliminados() {
-    try { return JSON.parse(localStorage.getItem(LS_ELIMINADOS) || '[]'); } catch { return []; }
+  async function getEliminados() {
+    try {
+      const data = await idbGet(LS_ELIMINADOS);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
   }
-  function addEliminado(id) {
-    const arr = getEliminados();
-    if (!arr.includes(id)) { arr.push(id); localStorage.setItem(LS_ELIMINADOS, JSON.stringify(arr)); }
+  async function addEliminado(id) {
+    const arr = await getEliminados();
+    if (!arr.includes(id)) {
+      arr.push(id);
+      await idbSet(LS_ELIMINADOS, JSON.stringify(arr));
+    }
   }
 
   async function fetchConTimeout(url, opts = {}, ms = 20000) {
@@ -499,12 +609,12 @@
           gistElim = JSON.parse(c);
         } catch (e) { console.warn('eliminados.json parse:', e); }
       }
-      const localElim = getEliminados();
+      const localElim = await getEliminados();
       const mergedElim = Array.from(new Set([...localElim, ...gistElim]));
       const gistElimSet = new Set(gistElim);
       const newDeletions = mergedElim.filter(id => !gistElimSet.has(id));
       const elimChanged = mergedElim.length !== localElim.length;
-      localStorage.setItem(LS_ELIMINADOS, JSON.stringify(mergedElim));
+      await idbSet(LS_ELIMINADOS, JSON.stringify(mergedElim));
 
       const beforeCount = biblioteca.libros.length;
       biblioteca.libros = biblioteca.libros.filter(l => !mergedElim.includes(l.id));
@@ -570,22 +680,23 @@
 
   async function cargarBiblioteca() {
     try {
-      const cache = localStorage.getItem(LS_CACHE_BIB);
+      const cache = await idbGet(LS_CACHE_BIB);
       if (cache) {
         biblioteca = JSON.parse(cache);
-        const eliminados = getEliminados();
+        const eliminados = await getEliminados();
         biblioteca.libros = biblioteca.libros.filter(l => !eliminados.includes(l.id));
+        console.log(`📚 Cargados ${biblioteca.libros.length} libros desde IndexedDB`);
       }
-    } catch (e) { console.warn('Local:', e); }
+    } catch (e) { console.warn('Error cargando de IndexedDB:', e); }
 
     if (tieneSync()) await sincronizarConGist(true);
     if (biblioteca.libros.length === 0) biblioteca = { version: 2, libros: [], preferencias: {} };
   }
 
   async function guardarBiblioteca(silencioso = false, extraFiles = {}) {
-    localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+    await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
     if (!tieneSync()) return true;
-    const eliminados = getEliminados();
+    const eliminados = await getEliminados();
     try {
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
         files: {
@@ -816,9 +927,9 @@
         leido: false, favorito: false, puntos: 0, fecha: Date.now(), progreso: 0,
         enProgreso: false
       };
-      localStorage.setItem(`libro-${nuevoId}.json`, JSON.stringify(contenidoLibro));
+      await idbSet(`libro-${nuevoId}`, JSON.stringify(contenidoLibro));
       biblioteca.libros.push(entrada);
-      localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
+      await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
       if (tieneSync()) {
         try {
           await guardarLibroEnGist(nuevoId, contenidoLibro);
@@ -851,10 +962,10 @@
     if (!libroActualReview) return;
     const l = libroActualReview;
     if (!confirm(`¿Eliminar «${l.titulo}»?`)) return;
-    localStorage.removeItem(`libro-${l.id}.json`);
+    await idbRemove(`libro-${l.id}`);
     biblioteca.libros = biblioteca.libros.filter(x => x.id !== l.id);
-    localStorage.setItem(LS_CACHE_BIB, JSON.stringify(biblioteca));
-    addEliminado(l.id);
+    await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
+    await addEliminado(l.id);
     $('#reviewModal').close();
     render();
     toast('Libro eliminado');
@@ -866,7 +977,7 @@
     }
   }
 
-  /* ═══ CARGA DESDE CARPETA: Resumen.txt + Cover.jpg automático ═══ */
+  /* ═══ CARGA DESDE CARPETA ═══ */
   async function loadBookFromFiles(txtFile, coverFile) {
     try {
       const texto = await leerArchivoTexto(txtFile);
@@ -1054,10 +1165,12 @@
   });
 
   (async function init() {
+    await openDB();
+    await migrarLocalStorageAIndexedDB();
+    await solicitarPersistencia();
     await cargarBiblioteca();
     render();
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    console.log('✅ index.html v22+compresión cargado');
+    console.log('✅ index.html v24 (IndexedDB) cargado');
   })();
 
   /* ═══ HELPERS ═══ */
@@ -1147,7 +1260,6 @@
     return resultado;
   }
 
-  // ⭐ COMPRESIÓN AJUSTADA: 120px ancho, 0.55 calidad → ~3-4 KB por portada
   async function comprimirThumbnail(blob, maxW = 120, quality = 0.55) {
     return new Promise((resolve) => {
       const img = new Image();

@@ -247,7 +247,11 @@
   const $ = (s) => document.querySelector(s);
   const SYNC_TOKEN_KEY = 'biblioteca-sync-token';
   const SYNC_GIST_KEY = 'biblioteca-sync-gist';
+  const LS_CACHE_BIB = 'biblioteca-cache-v11';
   const LS_ELIMINADOS = 'biblioteca-eliminados-v1';
+  const IDB_NAME = 'biblioteca-db';
+  const IDB_VERSION = 1;
+  const IDB_STORE = 'kv';
 
   const params = new URLSearchParams(location.search);
   const libroId = params.get('libro');
@@ -268,6 +272,7 @@
   let currentPageIdx = 0;
   let isAnimatingPage = false;
   let _guardarTimer = null;
+  let db = null;
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -280,11 +285,68 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // INDEXEDDB helpers
+  // ═══════════════════════════════════════════════════════════════
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (db) return resolve(db);
+      const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+      req.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(IDB_STORE)) {
+          database.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbGet(key) {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbSet(key, value) {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.put(value, key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function idbRemove(key) {
+    const database = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = database.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // Helpers
+  // ═══════════════════════════════════════════════════════════════
   function getToken() { return localStorage.getItem(SYNC_TOKEN_KEY) || ''; }
   function getGistId() { return localStorage.getItem(SYNC_GIST_KEY) || ''; }
 
-  function getEliminados() {
-    try { return JSON.parse(localStorage.getItem(LS_ELIMINADOS) || '[]'); } catch { return []; }
+  async function getEliminados() {
+    try {
+      const data = await idbGet(LS_ELIMINADOS);
+      return data ? JSON.parse(data) : [];
+    } catch { return []; }
   }
 
   function findCap(capId) {
@@ -323,22 +385,28 @@
     return total > 0 ? Math.round((suma / total) * 100) : 0;
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // CARGAR DATOS (IndexedDB + Gist)
+  // ═══════════════════════════════════════════════════════════════
   async function cargarDatos() {
     if (!libroId) throw new Error('No libro');
+    await openDB();
 
+    // 1. IndexedDB local
     try {
-      const localLibro = localStorage.getItem(`libro-${libroId}.json`);
+      const localLibro = await idbGet(`libro-${libroId}`);
       if (localLibro) { libro = JSON.parse(localLibro); libro.id = libroId; }
-    } catch (e) {}
+    } catch (e) { console.warn('idb libro:', e); }
 
     try {
-      const localBib = localStorage.getItem('biblioteca-cache-v11');
+      const localBib = await idbGet(LS_CACHE_BIB);
       if (localBib) {
         biblioteca = JSON.parse(localBib);
         entradaBiblioteca = biblioteca.libros.find(l => l.id === libroId);
       }
-    } catch (e) {}
+    } catch (e) { console.warn('idb bib:', e); }
 
+    // 2. Gist fallback / actualización
     if (getToken() && getGistId()) {
       try {
         const gist = await ghRequest('GET', `/gists/${getGistId()}`);
@@ -363,9 +431,10 @@
             const idx = biblioteca.libros.findIndex(l => l.id === libroId);
             if (idx >= 0) biblioteca.libros[idx] = merged;
             else biblioteca.libros.push(merged);
-            localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+            await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
           }
         }
+
         const libFile = gist.files && gist.files[`libro-${libroId}.json`];
         if (libFile) {
           const c = libFile.truncated ? await (await fetchConTimeout(libFile.raw_url)).text() : libFile.content;
@@ -374,7 +443,7 @@
           const totalGist = calcularProgresoLibro(gistLibro);
           if (!libro || totalGist >= totalLocal) {
             libro = gistLibro;
-            localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
+            await idbSet(`libro-${libroId}`, JSON.stringify(libro));
           }
         }
       } catch (e) { console.warn('Gist sync:', e.message); }
@@ -719,7 +788,7 @@
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) { biblioteca.libros[idx].enProgreso = true; biblioteca.libros[idx].fecha = Date.now(); }
     }
-    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+    idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca)).catch(() => {});
 
     const capEl = document.getElementById(`cap-${capId}`);
     if (capEl) {
@@ -831,13 +900,12 @@
     catch { pararTTS(); }
   }
 
-  // ⭐ GUARDAR: verifica si el libro fue eliminado en otro dispositivo
-  function guardarProgreso() {
+  // ═══ GUARDAR: IndexedDB local + Gist debounced ═══
+  async function guardarProgreso() {
     if (!libro) return;
-    // Si el libro fue eliminado en otro dispositivo, no resucitarlo
-    const eliminados = getEliminados();
+    const eliminados = await getEliminados();
     if (eliminados.includes(libroId)) {
-      console.warn('⚠ Libro eliminado en otro dispositivo, no se guarda');
+      console.warn('⚠ Libro eliminado, no se guarda');
       return;
     }
     const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
@@ -867,10 +935,10 @@
       if (enProgreso) entradaBiblioteca.enProgreso = true;
     }
     try {
-      localStorage.setItem(`libro-${libroId}.json`, JSON.stringify(libro));
-      localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+      await idbSet(`libro-${libroId}`, JSON.stringify(libro));
+      await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
       console.log(`💾 ${pct}% (${sumaFrags}/${totalFrags})`);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('idbSet error:', e); }
     actualizarProgreso();
     clearTimeout(window._gistTimer);
     window._gistTimer = setTimeout(guardarEnGistDebounced, 800);
@@ -878,8 +946,7 @@
 
   async function guardarEnGistDebounced() {
     if (!getToken() || !getGistId()) return;
-    // No subir si el libro fue eliminado
-    const eliminados = getEliminados();
+    const eliminados = await getEliminados();
     if (eliminados.includes(libroId)) return;
     try {
       await ghRequest('PATCH', `/gists/${getGistId()}`, {
@@ -903,7 +970,7 @@
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) { biblioteca.libros[idx].favorito = entradaBiblioteca.favorito; biblioteca.libros[idx].fecha = Date.now(); }
     }
-    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+    await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
     renderHeader();
     if (getToken() && getGistId()) {
       try { await ghRequest('PATCH', `/gists/${getGistId()}`, { files: { 'biblioteca.json': { content: JSON.stringify(biblioteca) } } }); } catch {}
@@ -920,7 +987,7 @@
       const idx = biblioteca.libros.findIndex(l => l.id === libroId);
       if (idx >= 0) biblioteca.libros[idx] = { ...entradaBiblioteca };
     }
-    localStorage.setItem('biblioteca-cache-v11', JSON.stringify(biblioteca));
+    await idbSet(LS_CACHE_BIB, JSON.stringify(biblioteca));
     renderHeader();
     actualizarProgreso();
     if (getToken() && getGistId()) {
@@ -1257,9 +1324,9 @@
   window.addEventListener('resize', () => { if (bookMode) applyBookMode(); });
 
   $('#btnBack').addEventListener('click', async () => {
-    guardarProgreso();
+    await guardarProgreso();
     if (getToken() && getGistId()) {
-      const eliminados = getEliminados();
+      const eliminados = await getEliminados();
       if (!eliminados.includes(libroId)) {
         clearTimeout(window._gistTimer);
         try {
@@ -1281,16 +1348,17 @@
   $('#btnLeido').addEventListener('click', toggleLeido);
   $('#tocToggle').addEventListener('click', () => { $('#tocPanel').classList.toggle('open'); });
 
-  window.addEventListener('pagehide', () => { try { guardarProgreso(); } catch(e) {} });
-  window.addEventListener('beforeunload', () => { try { guardarProgreso(); } catch(e) {} });
+  window.addEventListener('pagehide', () => { guardarProgreso().catch(() => {}); });
+  window.addEventListener('beforeunload', () => { guardarProgreso().catch(() => {}); });
 
   (async function init() {
     try {
+      await openDB();
       await cargarDatos();
       renderHeader();
       renderTOC();
       renderContenido();
-      console.log('✅ lector.html v22. Progreso:', entradaBiblioteca?.progreso);
+      console.log('✅ lector.html v24 (IndexedDB). Progreso:', entradaBiblioteca?.progreso);
       setTimeout(() => {
         const todosCaps = [...(libro.capitulos||[]), ...(libro.secciones||[]).flatMap(s => s.capitulos||[])];
         const capActivo = todosCaps.find(c => (c.ttsIndice || 0) > 0);
